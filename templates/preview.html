@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preview Video</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h1>Preview Your Video 🎬</h1>
+    <video width="100%" controls>
+      <source src="{{ url_for('serve_file', filename=filename) }}" type="video/mp4">
+      Your browser does not support HTML5 video.
+    </video>
+    <br><br>
+    <a href="{{ url_for('serve_file', filename=filename) }}">
+      <button>Download to Your Device</button>
+    </a>
+  </div>
+</body>
+</html>
