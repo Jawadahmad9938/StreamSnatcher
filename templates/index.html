@@ -5,16 +5,132 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StreamSnatcher 🎬</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    /* Simple spinner */
+    #spinner {
+      border: 4px solid rgba(0,0,0,0.1);
+      border-left-color: #4A90E2;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 15px auto;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #preview img {
+      display: block;
+      margin: 10px auto;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
     <h1>🎭 StreamSnatcher</h1>
-    <p>Paste a YouTube link and download the video</p>
+    <p>Paste a YouTube link to preview and download the video</p>
 
-    <form method="POST">
-      <input type="text" name="url" placeholder="Enter video URL" required>
-      <button type="submit">Download</button>
-    </form>
+    <input type="text" id="video-url" placeholder="Enter video URL" required>
+
+    <div id="spinner"></div>
+
+    <div id="preview" style="margin-top:20px; display:none;">
+      <img id="thumbnail" src="" width="300"><br>
+      <h3 id="title"></h3>
+      <button id="download-btn">Download</button>
+    </div>
   </div>
+
+  <script>
+    let currentUrl = "";
+    let currentTitle = "";
+    let timeout = null;
+
+    const urlInput = document.getElementById("video-url");
+    const spinner = document.getElementById("spinner");
+    const previewDiv = document.getElementById("preview");
+    const downloadBtn = document.getElementById("download-btn");
+
+    function schedulePreview() {
+      clearTimeout(timeout);
+      timeout = setTimeout(getPreview, 700); // debounce
+    }
+
+    urlInput.addEventListener("input", schedulePreview);
+    urlInput.addEventListener("paste", (e) => setTimeout(schedulePreview, 100));
+
+    async function getPreview() {
+      const url = urlInput.value.trim();
+      if (!url) {
+        previewDiv.style.display = "none";
+        return;
+      }
+
+      currentUrl = url;
+      spinner.style.display = "block";
+      previewDiv.style.display = "none";
+
+      try {
+        const res = await fetch("/preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url })
+        });
+        const data = await res.json();
+        spinner.style.display = "none";
+
+        if (data.error) {
+          console.log("Preview error:", data.error);
+          previewDiv.style.display = "none";
+          currentTitle = "";
+          return;
+        }
+
+        document.getElementById("thumbnail").src = data.thumbnail;
+        document.getElementById("title").innerText = data.title;
+        previewDiv.style.display = "block";
+        currentTitle = data.title;
+
+      } catch (err) {
+        console.log("Error fetching preview:", err);
+        spinner.style.display = "none";
+        previewDiv.style.display = "none";
+        currentTitle = "";
+      }
+    }
+
+    downloadBtn.addEventListener("click", async () => {
+      if (!currentUrl) return alert("No video URL");
+
+      spinner.style.display = "block";
+      previewDiv.style.display = "none";
+
+      try {
+        const res = await fetch("/download", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: currentUrl })
+        });
+        spinner.style.display = "none";
+
+        if (!res.ok) {
+          const err = await res.json();
+          alert("Error: " + err.error);
+          return;
+        }
+
+        const blob = await res.blob();
+        const link = document.createElement("a");
+        link.href = window.URL.createObjectURL(blob);
+        link.download = currentTitle ? `${currentTitle}.mp4` : "video.mp4";
+        link.click();
+
+      } catch (err) {
+        console.log("Download error:", err);
+        spinner.style.display = "none";
+        previewDiv.style.display = "block";
+      }
+    });
+  </script>
 </body>
 </html>
