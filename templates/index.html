@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>StreamSnatcher 🎬</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
     body {
       font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
@@ -16,7 +17,7 @@
 
     /* Navbar */
     .navbar {
-      background: rgba(0, 0, 0, 0.8);
+      background: rgba(0, 0, 0, 0.85);
       padding: 15px 30px;
       display: flex;
       justify-content: space-between;
@@ -29,7 +30,7 @@
 
     .navbar h2 {
       margin: 0;
-      font-size: 1.5rem;
+      font-size: 1.6rem;
       color: #f9ca24;
     }
 
@@ -37,6 +38,7 @@
       color: #fff;
       margin-left: 20px;
       text-decoration: none;
+      font-weight: 500;
       transition: 0.3s;
     }
 
@@ -44,27 +46,52 @@
       color: #f9ca24;
     }
 
-    /* Container */
+    /* Hero Section */
+    .hero {
+      text-align: center;
+      padding: 60px 20px 20px;
+    }
+
+    .hero h1 {
+      font-size: 2.4rem;
+      margin-bottom: 10px;
+      color: #f9ca24;
+    }
+
+    .hero p {
+      font-size: 1.1rem;
+      color: #ddd;
+      margin-bottom: 25px;
+    }
+
+    /* Supported Platforms */
+    .platforms {
+      display: flex;
+      justify-content: center;
+      gap: 25px;
+      margin-bottom: 25px;
+      flex-wrap: wrap;
+    }
+
+    .platforms i {
+      font-size: 2.3rem;
+      transition: transform 0.3s ease;
+    }
+
+    .platforms i:hover {
+      transform: scale(1.2);
+      color: #f9ca24;
+    }
+
+    /* Main Tool */
     .container {
       max-width: 600px;
-      margin: 60px auto;
+      margin: 0 auto 50px;
       padding: 30px;
       background: rgba(255, 255, 255, 0.08);
       border-radius: 15px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.3);
       text-align: center;
-    }
-
-    h1 {
-      font-size: 2.2rem;
-      margin-bottom: 10px;
-      color: #f9ca24;
-    }
-
-    p {
-      margin-bottom: 25px;
-      font-size: 1rem;
-      color: #ddd;
     }
 
     input[type="text"] {
@@ -137,12 +164,11 @@
 
     /* User Guide */
     .guide {
-      max-width: 600px;
+      max-width: 700px;
       margin: 40px auto;
       padding: 20px;
       background: rgba(255,255,255,0.05);
       border-radius: 12px;
-      text-align: left;
     }
 
     .guide h2 {
@@ -181,20 +207,29 @@
     </div>
   </div>
 
-  <!-- Main Tool -->
-  <div class="container" id="home">
+  <!-- Hero -->
+  <div class="hero" id="home">
     <h1>Download Videos Instantly</h1>
-    <p>Paste any <b>YouTube</b> or <b>Instagram</b> link to preview and download</p>
+    <p>Supports <b>YouTube</b>, <b>Instagram</b>, <b>TikTok</b>, <b>Facebook</b>, <b>Snapchat</b></p>
+    <div class="platforms">
+      <i class="fab fa-youtube" style="color:#ff0000"></i>
+      <i class="fab fa-instagram" style="color:#e1306c"></i>
+      <i class="fab fa-tiktok" style="color:#69c9d0"></i>
+      <i class="fab fa-facebook" style="color:#1877f2"></i>
+      <i class="fab fa-snapchat" style="color:#fffc00"></i>
+    </div>
+  </div>
 
-    <input type="text" id="video-url" placeholder="Enter video URL" required>
-
+  <!-- Main Tool -->
+  <div class="container">
+    <input type="text" id="video-url" placeholder="Paste video URL here..." required>
     <div id="spinner"></div>
 
     <div id="preview">
       <img id="thumbnail" src="" width="300"><br>
       <h3 id="title"></h3>
       <p id="source"></p>
-      <button id="download-btn">Download Video</button>
+      <button id="download-btn">⬇ Download Video</button>
     </div>
   </div>
 
@@ -202,7 +237,7 @@
   <div class="guide" id="guide">
     <h2>📘 How to Use StreamSnatcher</h2>
     <ol>
-      <li>Copy the link of any YouTube or Instagram video you want to download.</li>
+      <li>Copy the link of any <b>YouTube, Instagram, TikTok, Facebook</b> or <b>Snapchat</b> video.</li>
       <li>Paste the link in the input box above.</li>
       <li>Preview will load automatically with video thumbnail & title.</li>
       <li>Click the <b>Download Video</b> button to save it to your device.</li>
@@ -217,7 +252,6 @@
   <script>
     let currentUrl = "";
     let currentTitle = "";
-
     const urlInput = document.getElementById("video-url");
     const spinner = document.getElementById("spinner");
     const previewDiv = document.getElementById("preview");
