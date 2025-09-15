@@ -5,12 +5,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StreamSnatcher 🎬</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    #spinner {
+      border: 4px solid rgba(0,0,0,0.1);
+      border-left-color: #4A90E2;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 15px auto;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
+    #preview img {
+      display: block;
+      margin: 10px auto;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
     <h1>🎭 StreamSnatcher</h1>
-    <p>Paste a YouTube link to preview and download the video</p>
+    <p>Paste a <b>YouTube</b> or <b>Instagram</b> link to preview and download the video</p>
 
     <input type="text" id="video-url" placeholder="Enter video URL" required>
 
@@ -19,6 +36,7 @@
     <div id="preview" style="margin-top:20px; display:none;">
       <img id="thumbnail" src="" width="300"><br>
       <h3 id="title"></h3>
+      <p id="source" style="font-size:14px; color:gray;"></p>
       <button id="download-btn">Download</button>
     </div>
   </div>
@@ -70,6 +88,8 @@
 
         document.getElementById("thumbnail").src = data.thumbnail;
         document.getElementById("title").innerText = data.title;
+        document.getElementById("source").innerText =
+          "Source: " + (data.source || "Unknown");
         previewDiv.style.display = "block";
         currentTitle = data.title;
 

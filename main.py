@@ -21,32 +21,40 @@ def get_ffmpeg_path():
             ffmpeg_location = iio_ffmpeg.get_ffmpeg_exe()
     return ffmpeg_location
 
+
 @app.route("/")
 def home():
     return render_template("index.html")
+
 
 @app.route("/preview", methods=["POST"])
 def preview():
     video_url = request.json.get("url")
     if not video_url:
         return jsonify({"error": "No URL provided"}), 400
+
     try:
+        # yt-dlp works for YouTube + Instagram + many others
         ydl_opts = {"quiet": True, "skip_download": True}
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=False)
 
         return jsonify({
             "title": info.get("title"),
-            "thumbnail": info.get("thumbnail")
+            "thumbnail": info.get("thumbnail"),
+            "source": info.get("extractor")   # shows youtube / instagram
         })
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @app.route("/download", methods=["POST"])
 def download():
     video_url = request.json.get("url")
     if not video_url:
         return jsonify({"error": "No URL provided"}), 400
+
     try:
         ffmpeg_location = get_ffmpeg_path()
 
@@ -60,7 +68,7 @@ def download():
                 "format": "bestvideo+bestaudio/best",
                 "ffmpeg_location": ffmpeg_location,
                 "merge_output_format": "mp4",
-                "noplaylist": True
+                "noplaylist": True,
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -70,10 +78,10 @@ def download():
             if not os.path.exists(final_file_path):
                 return jsonify({"error": "Download failed"}), 500
 
-            # Read file into memory to avoid WinError 32
             with open(final_file_path, "rb") as f:
                 file_data = f.read()
 
+            # Force .mp4 even if Instagram sends .mkv or .webm
             return send_file(
                 io.BytesIO(file_data),
                 as_attachment=True,
@@ -83,6 +91,6 @@ def download():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 if __name__ == "__main__":
     app.run(debug=True)
-
