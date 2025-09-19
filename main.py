@@ -42,7 +42,7 @@ def preview():
         return jsonify({
             "title": info.get("title"),
             "thumbnail": info.get("thumbnail"),
-            "source": info.get("extractor")   # shows youtube / instagram
+            "source": info.get("extractor")
         })
 
     except Exception as e:
