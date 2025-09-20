@@ -8,18 +8,11 @@ import imageio_ffmpeg as iio_ffmpeg
 
 app = Flask(__name__)
 
-SYSTEM_FFMPEG_PATH = r"C:\ffmpeg-8.0-full_build\bin\ffmpeg.exe"
-USE_IMAGEIO_FFMPEG = True
-
 def get_ffmpeg_path():
-    ffmpeg_location = SYSTEM_FFMPEG_PATH
-    if USE_IMAGEIO_FFMPEG:
-        try:
-            if not os.path.exists(SYSTEM_FFMPEG_PATH):
-                ffmpeg_location = iio_ffmpeg.get_ffmpeg_exe()
-        except Exception:
-            ffmpeg_location = iio_ffmpeg.get_ffmpeg_exe()
-    return ffmpeg_location
+    try:
+        return iio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        return "ffmpeg"
 
 
 @app.route("/")
@@ -34,7 +27,6 @@ def preview():
         return jsonify({"error": "No URL provided"}), 400
 
     try:
-        # yt-dlp works for YouTube + Instagram + many others
         ydl_opts = {"quiet": True, "skip_download": True}
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=False)
@@ -81,7 +73,6 @@ def download():
             with open(final_file_path, "rb") as f:
                 file_data = f.read()
 
-            # Force .mp4 even if Instagram sends .mkv or .webm
             return send_file(
                 io.BytesIO(file_data),
                 as_attachment=True,
@@ -93,4 +84,5 @@ def download():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
