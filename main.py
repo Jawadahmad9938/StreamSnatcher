@@ -3,10 +3,9 @@ import yt_dlp
 import os
 import uuid
 import tempfile
-import imageio_ffmpeg as iio_ffmpeg
 import glob
 import shutil
-import time
+import imageio_ffmpeg as iio_ffmpeg
 
 app = Flask(__name__)
 
@@ -14,174 +13,106 @@ def get_ffmpeg_path():
     try:
         return iio_ffmpeg.get_ffmpeg_exe()
     except Exception:
-        return "ffmpeg"
+        return "ffmpeg"  # fallback to system ffmpeg
 
+class SimpleLogger:
+    def debug(self, msg): pass
+    def warning(self, msg): print("[yt-dlp warning]", msg)
+    def error(self, msg): print("[yt-dlp error]", msg)
 
 @app.route("/")
 def home():
     return render_template("index.html")
 
-
-def safe_extract_info(url):
-    """
-    Try to get metadata reliably. Returns info dict or None.
-    """
-    # First attempt: normal metadata extraction
-    base_opts = {
-        "quiet": True,
-        "skip_download": True,
-        "no_warnings": True,
-        "socket_timeout": 30,
-        "default_search": "auto",
-    }
-    try:
-        with yt_dlp.YoutubeDL(base_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            if info:
-                # if playlist, pick first entry
-                if "entries" in info and info["entries"]:
-                    info = info["entries"][0]
-                return info
-    except Exception as e:
-        # log for debugging
-        print("safe_extract_info: primary metadata extract failed:", e)
-
-    # Fallback: flat extraction (less strict)
-    try:
-        flat_opts = {
-            "quiet": True,
-            "skip_download": True,
-            "no_warnings": True,
-            "extract_flat": True,
-            "default_search": "auto",
-        }
-        with yt_dlp.YoutubeDL(flat_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            if info:
-                if "entries" in info and info["entries"]:
-                    info = info["entries"][0]
-                return info
-    except Exception as e:
-        print("safe_extract_info: fallback extract failed:", e)
-
-    return None
-
-
 @app.route("/download", methods=["POST"])
 def download():
-    """
-    Robust download endpoint:
-      - fetch metadata first
-      - if available, download into temp dir with outtmpl
-      - find final file (prepare_filename or fallback glob)
-      - stream file to client and cleanup temp dir
-    """
     video_url = request.json.get("url")
     if not video_url:
         return jsonify({"error": "No URL provided"}), 400
 
-    # Step 1: metadata
-    info = safe_extract_info(video_url)
-    if not info:
-        # Helpful error explaining common causes
-        return jsonify({
-            "error": "Download failed - could not fetch video info. "
-                     "Video may be private, region-locked, age-restricted or require cookies/login."
-        }), 500
-
-    # Use a temp dir per-download so we can reliably find the file and cleanup
-    tmpdir = tempfile.mkdtemp(prefix="streamsnatcher_")
+    tmpdir = tempfile.mkdtemp(prefix="yt_download_")
     unique_id = str(uuid.uuid4())
     outtmpl = os.path.join(tmpdir, f"{unique_id}.%(ext)s")
 
-    ffmpeg_location = get_ffmpeg_path()
-
     ydl_opts = {
-        "format": "bv*+ba/best",  # safe fallback: best video+audio if available, otherwise best
+        "format": "bestvideo+bestaudio/best",
         "outtmpl": outtmpl,
+        # ensure merging works
         "merge_output_format": "mp4",
-        "ffmpeg_location": ffmpeg_location,
-        "noplaylist": True,
-        "quiet": True,
-        "no_warnings": True,
-        # keep temp files if something goes wrong so we can inspect
+        "ffmpeg_location": get_ffmpeg_path(),
+        # helpful for debugging; remove or reduce verbosity in production
+        "quiet": False,
+        "no_warnings": False,
+        "ignoreerrors": False,
+        "logger": SimpleLogger(),
+        # do not write to home directory unexpectedly
+        "paths": {"temp": tmpdir},
     }
 
     try:
-        # Step 2: download
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # We call extract_info with download=True so yt-dlp downloads into tmpdir
-            info_dict = ydl.extract_info(video_url, download=True)
+            info = ydl.extract_info(video_url, download=True)
+            if not info:
+                return jsonify({"error": "yt-dlp returned no info for the URL"}), 500
 
-            if not info_dict:
-                # unexpected, but handle gracefully
-                shutil.rmtree(tmpdir, ignore_errors=True)
-                return jsonify({"error": "Download failed - no info returned by yt-dlp"}), 500
+            # If it's a playlist or has entries, pick first entry
+            if "entries" in info and info["entries"]:
+                entry = info["entries"][0]
+            else:
+                entry = info
 
-            # Try to get final filename from yt-dlp
+            # Attempt to get prepared filename; if not found, glob in tmpdir
             try:
-                final_path = ydl.prepare_filename(info_dict)
-            except Exception as e:
-                print("prepare_filename failed:", e)
-                final_path = None
+                possible_filename = ydl.prepare_filename(entry)
+            except Exception:
+                possible_filename = None
 
-        # Step 3: If prepare_filename didn't point to an existing file, try sensible fallbacks
-        if not final_path or not os.path.exists(final_path):
-            # first try .mp4 variant of prepared name
-            if final_path:
-                alt = os.path.splitext(final_path)[0] + ".mp4"
-                if os.path.exists(alt):
-                    final_path = alt
+            final_path = None
+            if possible_filename and os.path.exists(possible_filename):
+                final_path = possible_filename
+            else:
+                # fallback: find any file that starts with unique_id in tmpdir
+                matches = glob.glob(os.path.join(tmpdir, f"{unique_id}.*"))
+                if matches:
+                    # prefer .mp4 if exists
+                    mp4s = [m for m in matches if m.lower().endswith(".mp4")]
+                    final_path = mp4s[0] if mp4s else matches[0]
 
-        if not final_path or not os.path.exists(final_path):
-            # fallback: pick the largest file in tmpdir (likely the downloaded video)
-            candidates = glob.glob(os.path.join(tmpdir, "*"))
-            if not candidates:
-                shutil.rmtree(tmpdir, ignore_errors=True)
-                return jsonify({"error": "Download failed - file not created"}), 500
-            # choose largest file
-            candidates = sorted(candidates, key=lambda p: os.path.getsize(p), reverse=True)
-            final_path = candidates[0]
+            if not final_path or not os.path.exists(final_path):
+                # List tmpdir contents to help debugging
+                contents = os.listdir(tmpdir)
+                return jsonify({
+                    "error": "Download finished but output file not found",
+                    "tmpdir_contents": contents
+                }), 500
 
-        # final safety check
-        if not os.path.exists(final_path):
-            shutil.rmtree(tmpdir, ignore_errors=True)
-            return jsonify({"error": "Download failed - file not found after download"}), 500
-
-        # sanitize filename for Content-Disposition
-        safe_title = info_dict.get("title") if isinstance(info_dict, dict) else None
-        if not safe_title:
-            safe_title = info.get("title") or "video"
-        filename_header = "".join(c for c in safe_title if c.isalnum() or c in " _-.").strip() or "video"
-        filename_header = f"{filename_header}.mp4"
-
-        # Step 4: stream generator that cleans up tmpdir when done
-        def generate_and_cleanup(path, cleanup_dir):
-            try:
-                with open(path, "rb") as fh:
-                    while True:
-                        chunk = fh.read(8192)
-                        if not chunk:
-                            break
-                        yield chunk
-            finally:
-                # small delay to ensure streaming finished for client
+            # streaming generator
+            def generate(path):
                 try:
-                    time.sleep(0.1)
-                    shutil.rmtree(cleanup_dir, ignore_errors=True)
-                except Exception as e:
-                    print("cleanup failed:", e)
+                    with open(path, "rb") as f:
+                        while True:
+                            chunk = f.read(8192)
+                            if not chunk:
+                                break
+                            yield chunk
+                finally:
+                    # cleanup after streaming
+                    try:
+                        shutil.rmtree(tmpdir)
+                    except Exception:
+                        pass
 
-        # Return streaming response
-        resp = Response(generate_and_cleanup(final_path, tmpdir), mimetype="video/mp4")
-        resp.headers.set("Content-Disposition", "attachment", filename=filename_header)
-        return resp
+            title = entry.get("title") or "video"
+            safe_name = "".join(c for c in title if c.isalnum() or c in " ._-")[:200]
+            response = Response(generate(final_path), mimetype="video/mp4")
+            response.headers.set("Content-Disposition", "attachment", filename=f"{safe_name}.mp4")
+            return response
 
+    except yt_dlp.utils.DownloadError as de:
+        # yt-dlp specific download errors
+        return jsonify({"error": "yt-dlp download error", "detail": str(de)}), 500
     except Exception as e:
-        # ensure temp dir cleaned on unexpected error
-        shutil.rmtree(tmpdir, ignore_errors=True)
-        return jsonify({"error": f"Download failed: {str(e)}"}), 500
-
+        return jsonify({"error": "Download failed", "detail": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0", port=5000)
