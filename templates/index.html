@@ -1,360 +1,407 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>StreamSnatcher 🎬</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <style>
-    body {
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-      color: #fff;
-      margin: 0;
-      padding: 0;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>StreamSnatcher 🎬</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+        color: #fff;
+        margin: 0;
+        padding: 0;
+      }
 
-    /* Navbar */
-    .navbar {
-      background: rgba(0, 0, 0, 0.85);
-      padding: 15px 30px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-    }
+      .navbar {
+        background: rgba(0, 0, 0, 0.85);
+        padding: 15px 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+      }
 
-    .navbar h2 {
-      margin: 0;
-      font-size: 1.6rem;
-      color: #f9ca24;
-    }
+      .navbar h2 {
+        margin: 0;
+        font-size: 1.6rem;
+        color: #f9ca24;
+      }
 
-    .navbar a {
-      color: #fff;
-      margin-left: 20px;
-      text-decoration: none;
-      font-weight: 500;
-      transition: 0.3s;
-    }
+      .navbar a {
+        color: #fff;
+        margin-left: 20px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: 0.3s;
+      }
 
-    .navbar a:hover {
-      color: #f9ca24;
-    }
+      .navbar a:hover {
+        color: #f9ca24;
+      }
 
-    /* Hero Section */
-    .hero {
-      text-align: center;
-      padding: 60px 20px 20px;
-    }
+      .hero {
+        text-align: center;
+        padding: 60px 20px 20px;
+      }
 
-    .hero h1 {
-      font-size: 2.4rem;
-      margin-bottom: 10px;
-      color: #f9ca24;
-    }
+      .hero h1 {
+        font-size: 2.4rem;
+        margin-bottom: 10px;
+        color: #f9ca24;
+      }
 
-    .hero p {
-      font-size: 1.1rem;
-      color: #ddd;
-      margin-bottom: 25px;
-    }
+      .hero p {
+        font-size: 1.1rem;
+        color: #ddd;
+        margin-bottom: 25px;
+      }
 
-    /* Supported Platforms */
-    .platforms {
-      display: flex;
-      justify-content: center;
-      gap: 25px;
-      margin-bottom: 25px;
-      flex-wrap: wrap;
-    }
+      .platforms {
+        display: flex;
+        justify-content: center;
+        gap: 25px;
+        margin-bottom: 25px;
+        flex-wrap: wrap;
+      }
 
-    .platforms i {
-      font-size: 2.3rem;
-      transition: transform 0.3s ease;
-    }
+      .platforms i {
+        font-size: 2.3rem;
+        transition: transform 0.3s ease;
+      }
 
-    .platforms i:hover {
-      transform: scale(1.2);
-      color: #f9ca24;
-    }
+      .platforms i:hover {
+        transform: scale(1.2);
+        color: #f9ca24;
+      }
 
-    /* Main Tool */
-    .container {
-      max-width: 600px;
-      margin: 0 auto 50px;
-      padding: 30px;
-      background: rgba(255, 255, 255, 0.08);
-      border-radius: 15px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-      text-align: center;
-    }
+      .container {
+        max-width: 600px;
+        margin: 0 auto 50px;
+        padding: 30px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 15px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        text-align: center;
+      }
 
-    input[type="text"] {
-      width: 80%;
-      padding: 12px 15px;
-      border: none;
-      border-radius: 8px;
-      margin-bottom: 15px;
-      font-size: 1rem;
-    }
+      input[type="text"] {
+        width: 80%;
+        padding: 12px 15px;
+        border: none;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        font-size: 1rem;
+      }
 
-    input[type="text"]:focus {
-      outline: 2px solid #f9ca24;
-    }
+      input[type="text"]:focus {
+        outline: 2px solid #f9ca24;
+      }
 
-    button {
-      background: #f9ca24;
-      border: none;
-      color: #222;
-      padding: 12px 25px;
-      font-size: 1rem;
-      font-weight: bold;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: 0.3s ease;
-    }
+      button {
+        background: #f9ca24;
+        border: none;
+        color: #222;
+        padding: 12px 25px;
+        font-size: 1rem;
+        font-weight: bold;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: 0.3s ease;
+      }
 
-    button:hover {
-      background: #ffe55c;
-      transform: scale(1.05);
-    }
+      button:hover {
+        background: #ffe55c;
+        transform: scale(1.05);
+      }
 
-    #spinner {
-      border: 4px solid rgba(255,255,255,0.2);
-      border-left-color: #f9ca24;
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      animation: spin 1s linear infinite;
-      margin: 15px auto;
-      display: none;
-    }
+      #spinner {
+        border: 4px solid rgba(255, 255, 255, 0.2);
+        border-left-color: #f9ca24;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 15px auto;
+        display: none;
+      }
 
-    @keyframes spin { to { transform: rotate(360deg); } }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
 
-    #preview {
-      margin-top: 20px;
-      display: none;
-      background: rgba(255,255,255,0.1);
-      padding: 20px;
-      border-radius: 12px;
-    }
+      #preview {
+        margin-top: 20px;
+        display: none;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        border-radius: 12px;
+      }
 
-    #preview img {
-      border-radius: 12px;
-      margin-bottom: 15px;
-      max-width: 100%;
-    }
+      #preview img {
+        border-radius: 12px;
+        margin-bottom: 15px;
+        max-width: 100%;
+      }
 
-    #title {
-      margin: 10px 0;
-      font-size: 1.2rem;
-      font-weight: bold;
-    }
+      #title {
+        margin: 10px 0;
+        font-size: 1.2rem;
+        font-weight: bold;
+      }
 
-    #source {
-      font-size: 0.9rem;
-      color: #ccc;
-    }
+      #source {
+        font-size: 0.9rem;
+        color: #ccc;
+      }
 
-    /* Progress */
-    #progress-container {
-      display: none;
-      margin-top: 15px;
-      text-align: left;
-    }
+      #progress-container {
+        display: none;
+        margin-top: 15px;
+        text-align: left;
+      }
 
-    #progress-bar {
-      width: 100%;
-      background: rgba(255,255,255,0.2);
-      border-radius: 8px;
-      overflow: hidden;
-      height: 18px;
-    }
+      #progress-bar {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        overflow: hidden;
+        height: 18px;
+      }
 
-    #progress-fill {
-      height: 100%;
-      width: 0%;
-      background: #f9ca24;
-      transition: width 0.3s ease;
-    }
+      #progress-fill {
+        height: 100%;
+        width: 0%;
+        background: #f9ca24;
+        transition: width 0.3s ease;
+      }
 
-    #progress-text {
-      margin-top: 8px;
-      font-size: 0.9rem;
-      color: #ddd;
-    }
+      #progress-text {
+        margin-top: 8px;
+        font-size: 0.9rem;
+        color: #ddd;
+      }
 
-    /* User Guide */
-    .guide {
-      max-width: 700px;
-      margin: 40px auto;
-      padding: 20px;
-      background: rgba(255,255,255,0.05);
-      border-radius: 12px;
-    }
+      .guide {
+        max-width: 700px;
+        margin: 40px auto;
+        padding: 20px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+      }
 
-    .guide h2 {
-      color: #f9ca24;
-      font-size: 1.4rem;
-      margin-bottom: 10px;
-    }
+      .guide h2 {
+        color: #f9ca24;
+        font-size: 1.4rem;
+        margin-bottom: 10px;
+      }
 
-    .guide ol {
-      padding-left: 20px;
-    }
+      .guide ol {
+        padding-left: 20px;
+      }
 
-    .guide li {
-      margin-bottom: 10px;
-      line-height: 1.5;
-    }
+      .guide li {
+        margin-bottom: 10px;
+        line-height: 1.5;
+      }
 
-    footer {
-      margin-top: 40px;
-      padding: 20px;
-      background: rgba(0, 0, 0, 0.7);
-      text-align: center;
-      font-size: 0.9rem;
-      color: #aaa;
-    }
-  </style>
-</head>
-<body>
-  <!-- Navbar -->
-  <div class="navbar">
-    <h2>🎭 StreamSnatcher</h2>
-    <div>
-      <a href="#home">Home</a>
-      <a href="#guide">User Guide</a>
-      <a href="#contact">Contact</a>
-    </div>
-  </div>
-
-  <!-- Hero -->
-  <div class="hero" id="home">
-    <h1>Download Videos Instantly</h1>
-    <p>Supports <b>YouTube</b>, <b>Instagram</b>, <b>TikTok</b>, <b>Facebook</b>, <b>Snapchat</b></p>
-    <div class="platforms">
-      <i class="fab fa-youtube" style="color:#ff0000"></i>
-      <i class="fab fa-instagram" style="color:#e1306c"></i>
-      <i class="fab fa-tiktok" style="color:#69c9d0"></i>
-      <i class="fab fa-facebook" style="color:#1877f2"></i>
-      <i class="fab fa-snapchat" style="color:#fffc00"></i>
-    </div>
-  </div>
-
-  <!-- Main Tool -->
-  <div class="container">
-    <input type="text" id="video-url" placeholder="Paste video URL here..." required>
-    <div id="spinner"></div>
-
-    <div id="preview">
-      <img id="thumbnail" src="" width="300"><br>
-      <h3 id="title"></h3>
-      <p id="source"></p>
-      <button id="download-btn">Download Video</button>
-
-      <!-- Progress -->
-      <div id="progress-container">
-        <div id="progress-bar"><div id="progress-fill"></div></div>
-        <div id="progress-text">0% - Waiting...</div>
+      footer {
+        margin-top: 40px;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.7);
+        text-align: center;
+        font-size: 0.9rem;
+        color: #aaa;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="navbar">
+      <h2>🎭 StreamSnatcher</h2>
+      <div>
+        <a href="#home">Home</a>
+        <a href="#guide">User Guide</a>
+        <a href="#contact">Contact</a>
       </div>
     </div>
-  </div>
 
-  <!-- User Guide -->
-  <div class="guide" id="guide">
-    <h2>📘 How to Use StreamSnatcher</h2>
-    <ol>
-      <li>Copy the link of any <b>YouTube, Instagram, TikTok, Facebook</b> or <b>Snapchat</b> video.</li>
-      <li>Paste the link in the input box above.</li>
-      <li>Preview will load automatically with video thumbnail & title.</li>
-      <li>Click the <b>Download Video</b> button to save it to your device.</li>
-    </ol>
-  </div>
+    <div class="hero" id="home">
+      <h1>Download Videos Instantly</h1>
+      <p>
+        Supports <b>YouTube</b>, <b>Instagram</b>, <b>TikTok</b>,
+        <b>Facebook</b>, <b>Snapchat</b>
+      </p>
+      <div class="platforms">
+        <i class="fab fa-youtube" style="color: #ff0000"></i>
+        <i class="fab fa-instagram" style="color: #e1306c"></i>
+        <i class="fab fa-tiktok" style="color: #69c9d0"></i>
+        <i class="fab fa-facebook" style="color: #1877f2"></i>
+        <i class="fab fa-snapchat" style="color: #fffc00"></i>
+      </div>
+    </div>
 
-  <!-- Footer -->
-  <footer id="contact">
-    🚀 Made with ❤️ by <b>StreamSnatcher</b> | All Rights Reserved © 2025
-  </footer>
+    <div class="container">
+      <input
+        type="text"
+        id="video-url"
+        placeholder="Paste video URL here..."
+        required
+      />
+      <div id="spinner"></div>
 
-  <script>
-    let currentUrl = "";
-    let currentTitle = "";
-    const urlInput = document.getElementById("video-url");
-    const spinner = document.getElementById("spinner");
-    const previewDiv = document.getElementById("preview");
-    const downloadBtn = document.getElementById("download-btn");
-    let timeout = null;
-    
-    // Auto preview on input/paste
-    function schedulePreview() {
-      clearTimeout(timeout);
-      timeout = setTimeout(getPreview, 600);
-    }
-    urlInput.addEventListener("input", schedulePreview);
-    urlInput.addEventListener("paste", () => setTimeout(schedulePreview, 100));
-    
-    async function getPreview() {
-      const url = urlInput.value.trim();
-      if (!url) {
-        previewDiv.style.display = "none";
-        return;
+      <div id="preview">
+        <img id="thumbnail" src="" width="300" /><br />
+        <h3 id="title"></h3>
+        <p id="source"></p>
+        <button id="download-btn">Download Video</button>
+
+        <div id="progress-container">
+          <div id="progress-bar"><div id="progress-fill"></div></div>
+          <div id="progress-text">0% - Waiting...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="guide" id="guide">
+      <h2>📘 How to Use StreamSnatcher</h2>
+      <ol>
+        <li>
+          Copy the link of any <b>YouTube, Instagram, TikTok, Facebook</b> or
+          <b>Snapchat</b> video.
+        </li>
+        <li>Paste the link in the input box above.</li>
+        <li>Preview will load automatically with video thumbnail & title.</li>
+        <li>
+          Click the <b>Download Video</b> button to save it to your device.
+        </li>
+      </ol>
+    </div>
+
+    <footer id="contact">
+      Made with ❤️ by <b>StreamSnatcher</b> | All Rights Reserved © 2025
+    </footer>
+
+    <script>
+      let currentUrl = "";
+      let currentTitle = "";
+      const urlInput = document.getElementById("video-url");
+      const spinner = document.getElementById("spinner");
+      const previewDiv = document.getElementById("preview");
+      const downloadBtn = document.getElementById("download-btn");
+      let timeout = null;
+
+      // Auto preview on input/paste
+      function schedulePreview() {
+        clearTimeout(timeout);
+        timeout = setTimeout(getPreview, 600);
       }
-    
-      currentUrl = url;
-      spinner.style.display = "block";
-      previewDiv.style.display = "none";
-    
-      try {
-        const res = await fetch("/preview", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url })
-        });
-        const data = await res.json();
-        spinner.style.display = "none";
-    
-        if (data.error) {
+      urlInput.addEventListener("input", schedulePreview);
+      urlInput.addEventListener("paste", () =>
+        setTimeout(schedulePreview, 100)
+      );
+
+      async function getPreview() {
+        const url = urlInput.value.trim();
+        if (!url) {
           previewDiv.style.display = "none";
-          alert("❌ Preview failed: " + data.error);
           return;
         }
-    
-        document.getElementById("thumbnail").src = data.thumbnail;
-        document.getElementById("title").innerText = data.title;
-        document.getElementById("source").innerText =
-          "Source: " + (data.source || "Unknown");
-        previewDiv.style.display = "block";
-        currentTitle = data.title;
-    
-      } catch (err) {
-        spinner.style.display = "none";
-        alert("❌ Error fetching preview.");
+
+        currentUrl = url;
+        spinner.style.display = "block";
+        previewDiv.style.display = "none";
+
+        try {
+          const res = await fetch("/preview", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url }),
+          });
+          const data = await res.json();
+          spinner.style.display = "none";
+
+          if (data.error) {
+            previewDiv.style.display = "none";
+            alert("❌ Preview failed: " + data.error);
+            return;
+          }
+
+          document.getElementById("thumbnail").src = data.thumbnail;
+          document.getElementById("title").innerText = data.title;
+          document.getElementById("source").innerText =
+            "Source: " + (data.source || "Unknown");
+          previewDiv.style.display = "block";
+          currentTitle = data.title;
+        } catch (err) {
+          spinner.style.display = "none";
+          alert("❌ Error fetching preview.");
+        }
       }
-    }
-    
-    // ✅ Native Chrome download trigger
-    downloadBtn.addEventListener("click", () => {
-      if (!currentUrl) return alert("No video URL");
-    
-      spinner.style.display = "block";
-      previewDiv.style.display = "none";
-    
-      // Redirect directly to Flask download endpoint (GET request)
-      window.location.href = "/download?url=" + encodeURIComponent(currentUrl);
-    
-      // Reset input after triggering download
-      urlInput.value = "";
-      currentUrl = "";
-      currentTitle = "";
-    });
-    
-  </script>
-</body>
+
+      downloadBtn.addEventListener("click", async () => {
+        if (!currentUrl) return alert("No video URL");
+
+        spinner.style.display = "block";
+
+        try {
+          const res = await fetch(
+            "/download?url=" + encodeURIComponent(currentUrl)
+          );
+
+          const contentType = res.headers.get("content-type") || "";
+          if (contentType.includes("application/json")) {
+            const data = await res.json();
+            spinner.style.display = "none";
+
+            if (data.error) {
+              alert("❌ Download error: " + data.error);
+              return;
+            }
+
+            const a = document.createElement("a");
+            a.href = data.direct_url;
+            a.download = (data.title || "video") + ".mp4";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+          } else {
+            const blob = await res.blob();
+            spinner.style.display = "none";
+
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = downloadUrl;
+            a.download = (currentTitle || "video") + ".mp4";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+
+            window.URL.revokeObjectURL(downloadUrl);
+          }
+        } catch (err) {
+          console.error("❌ Download error:", err);
+          alert("❌ Failed to fetch download link.");
+        } finally {
+          spinner.style.display = "none";
+
+          currentUrl = "";
+          currentTitle = "";
+          urlInput.value = "";
+        }
+      });
+    </script>
+  </body>
 </html>
