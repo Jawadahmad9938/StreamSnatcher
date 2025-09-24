@@ -4,13 +4,13 @@ import os
 import uuid
 import tempfile
 import shutil
-import mimetypes
 import imageio_ffmpeg as iio_ffmpeg
 
 app = Flask(__name__)
 
-SYSTEM_FFMPEG_PATH = r"C:\ffmpeg-8.0-full_build\bin\ffmpeg.exe"
-USE_IMAGEIO_FFMPEG = True
+# ---- Config ----
+# Local testing ke liye env var set karlo: USE_IMAGEIO_FFMPEG=true
+USE_IMAGEIO_FFMPEG = os.environ.get("USE_IMAGEIO_FFMPEG", "false").lower() == "true"
 
 
 def get_ffmpeg_path():
@@ -19,7 +19,7 @@ def get_ffmpeg_path():
             return iio_ffmpeg.get_ffmpeg_exe()
         except Exception:
             return "ffmpeg"
-    return SYSTEM_FFMPEG_PATH
+    return "ffmpeg"   # Production (Aptfile ffmpeg installed)
 
 
 @app.route("/")
@@ -37,7 +37,6 @@ def preview():
         ydl_opts = {
             "quiet": True,
             "skip_download": True,
-            # ---- timeout/retry fixes ----
             "retries": 10,
             "fragment_retries": 10,
             "socket_timeout": 30,
@@ -59,12 +58,7 @@ def preview():
 
 @app.route("/download", methods=["GET", "POST"])
 def download():
-    # For POST (AJAX)
-    if request.method == "POST":
-        video_url = request.json.get("url")
-    else:  # For GET (browser download)
-        video_url = request.args.get("url")
-
+    video_url = request.json.get("url") if request.method == "POST" else request.args.get("url")
     if not video_url:
         return jsonify({"error": "No URL provided"}), 400
 
@@ -81,7 +75,6 @@ def download():
             "ffmpeg_location": ffmpeg_location,
             "merge_output_format": "mp4",
             "noplaylist": True,
-            # ---- timeout/retry fixes ----
             "retries": 10,
             "fragment_retries": 10,
             "socket_timeout": 30,
@@ -99,10 +92,7 @@ def download():
 
         def generate():
             with open(final_file_path, "rb") as f:
-                while True:
-                    chunk = f.read(8192)
-                    if not chunk:
-                        break
+                while chunk := f.read(8192):
                     yield chunk
             shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -121,4 +111,4 @@ def download():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=False, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
