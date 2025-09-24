@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, send_file, jsonify
 import yt_dlp
 import os
 import uuid
-import io
 import tempfile
 import imageio_ffmpeg as iio_ffmpeg
 
@@ -27,7 +26,7 @@ def preview():
         return jsonify({"error": "No URL provided"}), 400
 
     try:
-        # ✅ More robust configuration
+        # ✅ Metadata-only options (no fixed format)
         ydl_opts = {
             "quiet": True,
             "skip_download": True,
@@ -35,22 +34,20 @@ def preview():
             "no_warnings": False,
             "extract_flat": False,
             "force_json": True,
-            "format": "best",  # ✅ Specific format selection
             "socket_timeout": 30,
             "extractor_args": {
                 "youtube": {
-                    "skip": ["dash", "hls"]  # ✅ Skip problematic formats
+                    "skip": ["dash", "hls"]
                 }
             }
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # ✅ Try multiple approaches
             try:
                 info = ydl.extract_info(video_url, download=False)
             except Exception as extract_error:
                 print(f"First extract attempt failed: {extract_error}")
-                # ✅ Retry with simpler options
+                # ✅ fallback: very flat/simple
                 ydl_opts_simple = {
                     "quiet": True,
                     "skip_download": True,
@@ -61,41 +58,44 @@ def preview():
                     info = ydl_simple.extract_info(video_url, download=False)
 
         if not info:
-            return jsonify({"error": "Could not fetch video info. Video might be restricted or unavailable."}), 404
+            return jsonify({
+                "title": "Unknown Title",
+                "thumbnail": None,
+                "uploader": "Unknown",
+                "duration": 0,
+                "source": "Unknown",
+                "formats": []
+            }), 200
 
-        # Handle playlist
+        # Handle playlist → pick first entry
         if "entries" in info:
             if info["entries"]:
                 info = info["entries"][0]
             else:
                 return jsonify({"error": "Playlist is empty"}), 404
 
-        # ✅ Safe format extraction
+        # ✅ Collect formats (but don’t break if none)
         formats = []
         for f in info.get("formats", []):
             try:
-                format_info = {
+                if not f.get("url"):
+                    continue
+                formats.append({
                     "format_id": f.get("format_id", "unknown"),
                     "ext": f.get("ext", "unknown"),
-                    "resolution": "N/A",
+                    "resolution": f.get("resolution")
+                        or (f"{f.get('width','?')}x{f.get('height','?')}"
+                            if f.get("width") and f.get("height") else "N/A"),
                     "filesize": f.get("filesize") or f.get("filesize_approx", 0),
-                    "format_note": f.get("format_note", ""),
-                }
-                
-                # ✅ Better resolution detection
-                if f.get("resolution"):
-                    format_info["resolution"] = f["resolution"]
-                elif f.get("width") and f.get("height"):
-                    format_info["resolution"] = f"{f['width']}x{f['height']}"
-                
-                formats.append(format_info)
+                    "note": f.get("format_note", "")
+                })
             except Exception:
                 continue
 
-        # ✅ Get best available thumbnail
+        # ✅ Best thumbnail
         thumbnail = info.get("thumbnail")
         if not thumbnail and info.get("thumbnails"):
-            for thumb in reversed(info["thumbnails"]):  # Get highest quality thumbnail
+            for thumb in reversed(info["thumbnails"]):
                 if thumb.get("url"):
                     thumbnail = thumb["url"]
                     break
@@ -113,8 +113,7 @@ def preview():
         error_msg = f"Preview failed: {str(e)}"
         print(f"Preview Error Details: {error_msg}")
         return jsonify({"error": error_msg}), 500
-    
-    
+
 
 @app.route("/download", methods=["POST"])
 def download():
@@ -130,16 +129,15 @@ def download():
             temp_filename = f"{unique_id}.%(ext)s"
             file_path_template = os.path.join(tmpdir, temp_filename)
 
-            # ✅ More robust download options
             ydl_opts = {
                 "outtmpl": file_path_template,
                 "format": "bestvideo+bestaudio/best",
                 "ffmpeg_location": ffmpeg_location,
                 "merge_output_format": "mp4",
                 "noplaylist": True,
-                "ignoreerrors": True,  # ✅ Important addition
+                "ignoreerrors": True,
                 "no_warnings": False,
-                "http_chunk_size": 10485760,  # ✅ Better for large files
+                "http_chunk_size": 10485760,
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -149,13 +147,10 @@ def download():
             if not os.path.exists(final_file_path):
                 return jsonify({"error": "Download failed - file not created"}), 500
 
-            # ✅ Better file handling
             file_handle = open(final_file_path, "rb")
             filename = f"{info_dict.get('title', 'video')}.mp4"
-            
-            # ✅ Clean special characters from filename
             filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_', '.')).rstrip()
-            
+
             return send_file(
                 file_handle,
                 as_attachment=True,
@@ -165,7 +160,7 @@ def download():
 
     except Exception as e:
         return jsonify({"error": f"Download failed: {str(e)}"}), 500
-    
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
