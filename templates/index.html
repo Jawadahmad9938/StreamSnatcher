@@ -282,88 +282,46 @@
     let currentTitle = "";
     const urlInput = document.getElementById("video-url");
     const spinner = document.getElementById("spinner");
-    const previewDiv = document.getElementById("preview");
     const downloadBtn = document.getElementById("download-btn");
-    let timeout = null;
-
-    // Auto preview on input/paste
-    function schedulePreview() {
-      clearTimeout(timeout);
-      timeout = setTimeout(getPreview, 600);
-    }
-    urlInput.addEventListener("input", schedulePreview);
-    urlInput.addEventListener("paste", () => setTimeout(schedulePreview, 100));
-
-    async function getPreview() {
-      const url = urlInput.value.trim();
-      if (!url) {
-        previewDiv.style.display = "none";
-        return;
-      }
-
-      currentUrl = url;
-      spinner.style.display = "block";
-      previewDiv.style.display = "none";
-
-      try {
-        const res = await fetch("/preview", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url })
-        });
-        const data = await res.json();
-        spinner.style.display = "none";
-
-        if (data.error) {
-          previewDiv.style.display = "none";
-          alert("❌ Preview failed: " + data.error);
-          return;
-        }
-
-        document.getElementById("thumbnail").src = data.thumbnail;
-        document.getElementById("title").innerText = data.title;
-        document.getElementById("source").innerText =
-          "Source: " + (data.source || "Unknown");
-        previewDiv.style.display = "block";
-        currentTitle = data.title;
-
-      } catch (err) {
-        spinner.style.display = "none";
-        alert("❌ Error fetching preview.");
-      }
-    }
-
+  
+    // Just take input value
+    urlInput.addEventListener("input", () => {
+      currentUrl = urlInput.value.trim();
+    });
+  
     downloadBtn.addEventListener("click", async () => {
-      if (!currentUrl) return alert("No video URL");
-
+      if (!currentUrl) return alert("⚠️ Please enter a video URL");
+  
       spinner.style.display = "block";
-      previewDiv.style.display = "none";
-
+  
       try {
         const res = await fetch("/download", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ url: currentUrl })
         });
+  
         spinner.style.display = "none";
-
+  
         if (!res.ok) {
           const err = await res.json();
-          alert("Error: " + err.error);
+          alert("❌ Error: " + err.error);
           return;
         }
-
+  
+        // Stream response as blob
         const blob = await res.blob();
         const link = document.createElement("a");
         link.href = window.URL.createObjectURL(blob);
-        link.download = currentTitle ? `${currentTitle}.mp4` : "video.mp4";
+        link.download = "video.mp4"; // Default file name
         link.click();
-
+  
       } catch (err) {
         spinner.style.display = "none";
         alert("❌ Error downloading video.");
       }
     });
   </script>
+  
 </body>
 </html>
