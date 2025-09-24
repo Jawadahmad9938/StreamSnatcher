@@ -27,11 +27,10 @@ def preview():
         return jsonify({"error": "No URL provided"}), 400
 
     try:
+        # 👇 Bilkul minimal options, no format forcing
         ydl_opts = {
             "quiet": True,
             "skip_download": True,
-            "force_generic_extractor": False,
-            "cookies_from_browser": ("chrome",), 
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -40,23 +39,29 @@ def preview():
         if not info:
             return jsonify({"error": "Could not fetch video info"}), 404
 
-        # Agar playlist ho to first entry lo
+        # Agar playlist mila ho to first entry lelo
         if "entries" in info:
             info = info["entries"][0]
 
-        # Jo bhi best available format mila uska info lo
-        best_format = None
-        if "formats" in info and info["formats"]:
-            best_format = info["formats"][-1]  # last item usually best hota hai
+        # Saare available formats nikaal lo (preview ke liye)
+        formats = []
+        for f in info.get("formats", []):
+            formats.append({
+                "format_id": f.get("format_id"),
+                "ext": f.get("ext"),
+                "resolution": f.get("resolution") or f"{f.get('width')}x{f.get('height')}",
+                "filesize": f.get("filesize") or f.get("filesize_approx"),
+                "format_note": f.get("format_note"),
+            })
 
+        # Sirf basic info + format list bhej do
         return jsonify({
             "title": info.get("title"),
             "thumbnail": info.get("thumbnail"),
             "uploader": info.get("uploader"),
             "duration": info.get("duration"),
             "source": info.get("extractor"),
-            "format_note": best_format.get("format_note") if best_format else None,
-            "ext": best_format.get("ext") if best_format else None,
+            "formats": formats
         })
 
     except Exception as e:
