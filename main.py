@@ -27,21 +27,44 @@ def preview():
         return jsonify({"error": "No URL provided"}), 400
 
     try:
-        # Metadata only (no format forcing)
+        # First attempt → normal metadata extraction
         ydl_opts = {
             "quiet": True,
             "skip_download": True,
             "ignoreerrors": True,
-            "extract_flat": True,   # ✅ only metadata, no format requests
+            "no_warnings": True
         }
 
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(video_url, download=False)
+        info = None
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(video_url, download=False)
+        except Exception as e1:
+            print("First attempt failed:", str(e1))
 
+        # Fallback → extract_flat only
         if not info:
-            return jsonify({"error": "Could not fetch video info"}), 404
+            try:
+                ydl_opts_flat = {
+                    "quiet": True,
+                    "skip_download": True,
+                    "ignoreerrors": True,
+                    "extract_flat": True
+                }
+                with yt_dlp.YoutubeDL(ydl_opts_flat) as ydl:
+                    info = ydl.extract_info(video_url, download=False)
+            except Exception as e2:
+                print("Fallback attempt failed:", str(e2))
 
-        # If playlist, pick first entry
+        # Still nothing → return dummy
+        if not info:
+            return jsonify({
+                "title": "Unknown Title",
+                "thumbnail": None,
+                "source": "Unknown"
+            })
+
+        # If playlist → pick first entry
         if "entries" in info and info["entries"]:
             info = info["entries"][0]
 
