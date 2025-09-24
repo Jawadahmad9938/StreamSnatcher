@@ -27,10 +27,12 @@ def preview():
         return jsonify({"error": "No URL provided"}), 400
 
     try:
-        # Added "ignoreerrors": True for safer metadata extraction
         ydl_opts = {"quiet": True, "skip_download": True, "ignoreerrors": True}
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=False)
+
+        if not info:  # ✅ Handle NoneType
+            return jsonify({"error": "Could not fetch video info"}), 404
 
         return jsonify({
             "title": info.get("title"),
@@ -40,6 +42,7 @@ def preview():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 
 @app.route("/download", methods=["POST"])
