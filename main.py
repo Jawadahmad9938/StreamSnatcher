@@ -27,35 +27,29 @@ def preview():
         return jsonify({"error": "No URL provided"}), 400
 
     try:
-        ydl_opts = {"quiet": True, "skip_download": True}
+        ydl_opts = {
+            "quiet": True,
+            "skip_download": True,
+            "force_generic_extractor": False,  # youtube ka proper extractor use karega
+        }
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=False)
 
         if not info:
             return jsonify({"error": "Could not fetch video info"}), 404
 
-        # If playlist -> take first entry
+        # Agar playlist di ho to pehla item lo
         if "entries" in info:
             info = info["entries"][0]
 
-        # Collect all available formats
-        formats = []
-        for f in info.get("formats", []):
-            formats.append({
-                "format_id": f.get("format_id"),
-                "ext": f.get("ext"),
-                "resolution": f.get("resolution") or f"{f.get('width')}x{f.get('height')}",
-                "filesize": f.get("filesize") or f.get("filesize_approx"),
-                "format_note": f.get("format_note"),
-            })
-
+        # Bas basic preview ka data bhej do
         return jsonify({
             "title": info.get("title"),
             "thumbnail": info.get("thumbnail"),
             "uploader": info.get("uploader"),
             "duration": info.get("duration"),
-            "source": info.get("extractor"),
-            "formats": formats
+            "source": info.get("extractor")
         })
 
     except Exception as e:
