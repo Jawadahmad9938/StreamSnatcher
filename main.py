@@ -29,7 +29,8 @@ def download():
     outtmpl = os.path.join(tmpdir, f"{unique_id}.%(ext)s")
 
     ydl_opts = {
-        "format": "best",  # universal best available
+        "format": "bestvideo+bestaudio/best",   # try best combo, else fallback
+        "merge_output_format": "mp4",           # always merge into mp4
         "outtmpl": outtmpl,
         "quiet": False,
         "no_warnings": False,
@@ -48,55 +49,44 @@ def download():
 
             entry = info["entries"][0] if "entries" in info and info["entries"] else info
 
-            # get prepared filename
+        # find final merged file
+        matches = glob.glob(os.path.join(tmpdir, f"{unique_id}.*"))
+        final_path = matches[0] if matches else None
+
+        if not final_path or not os.path.exists(final_path):
+            contents = os.listdir(tmpdir)
+            shutil.rmtree(tmpdir, ignore_errors=True)
+            return jsonify({
+                "error": "Download finished but output file not found",
+                "tmpdir_contents": contents
+            }), 500
+
+        def generate(path):
             try:
-                possible_filename = ydl.prepare_filename(entry)
-            except Exception:
-                possible_filename = None
-
-            final_path = None
-            if possible_filename and os.path.exists(possible_filename):
-                final_path = possible_filename
-            else:
-                matches = glob.glob(os.path.join(tmpdir, f"{unique_id}.*"))
-                if matches:
-                    final_path = matches[0]
-
-            if not final_path or not os.path.exists(final_path):
-                contents = os.listdir(tmpdir)
+                with open(path, "rb") as f:
+                    while True:
+                        chunk = f.read(8192)
+                        if not chunk:
+                            break
+                        yield chunk
+            finally:
                 shutil.rmtree(tmpdir, ignore_errors=True)
-                return jsonify({
-                    "error": "Download finished but output file not found",
-                    "tmpdir_contents": contents
-                }), 500
 
-            def generate(path):
-                try:
-                    with open(path, "rb") as f:
-                        while True:
-                            chunk = f.read(8192)
-                            if not chunk:
-                                break
-                            yield chunk
-                finally:
-                    shutil.rmtree(tmpdir, ignore_errors=True)
+        title = entry.get("title") or "video"
+        safe_name = "".join(c for c in title if c.isalnum() or c in " ._-")[:200]
+        ext = os.path.splitext(final_path)[1] or ".mp4"
 
-            title = entry.get("title") or "video"
-            safe_name = "".join(c for c in title if c.isalnum() or c in " ._-")[:200]
-            ext = os.path.splitext(final_path)[1] or ".bin"
+        mtype, _ = mimetypes.guess_type(final_path)
+        if not mtype:
+            mtype = "application/octet-stream"
 
-            # dynamic mimetype
-            mtype, _ = mimetypes.guess_type(final_path)
-            if not mtype:
-                mtype = "application/octet-stream"
-
-            response = Response(generate(final_path), mimetype=mtype)
-            response.headers.set(
-                "Content-Disposition",
-                "attachment",
-                filename=f"{safe_name}{ext}"
-            )
-            return response
+        response = Response(generate(final_path), mimetype=mtype)
+        response.headers.set(
+            "Content-Disposition",
+            "attachment",
+            filename=f"{safe_name}{ext}"
+        )
+        return response
 
     except yt_dlp.utils.DownloadError as de:
         shutil.rmtree(tmpdir, ignore_errors=True)
