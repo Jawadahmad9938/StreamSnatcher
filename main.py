@@ -31,6 +31,7 @@ def preview():
             "quiet": True,
             "skip_download": True,
             "force_generic_extractor": False,
+            "cookies_from_browser": ("chrome",), 
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
