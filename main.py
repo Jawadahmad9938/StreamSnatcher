@@ -27,11 +27,11 @@ def preview():
         return jsonify({"error": "No URL provided"}), 400
 
     try:
-        ydl_opts = {"quiet": True, "skip_download": True, "ignoreerrors": True}
+        ydl_opts = {"quiet": True, "skip_download": True}
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=False)
 
-        if not info:  # ✅ Handle NoneType
+        if not info:
             return jsonify({"error": "Could not fetch video info"}), 404
 
         return jsonify({
