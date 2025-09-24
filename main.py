@@ -26,93 +26,34 @@ def preview():
         return jsonify({"error": "No URL provided"}), 400
 
     try:
-        # ✅ Metadata-only options (no fixed format)
         ydl_opts = {
             "quiet": True,
             "skip_download": True,
             "ignoreerrors": True,
             "no_warnings": False,
-            "extract_flat": False,
-            "force_json": True,
             "socket_timeout": 30,
-            "extractor_args": {
-                "youtube": {
-                    "skip": ["dash", "hls"]
-                }
-            }
+            "default_search": "auto",
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            try:
-                info = ydl.extract_info(video_url, download=False)
-            except Exception as extract_error:
-                print(f"First extract attempt failed: {extract_error}")
-                # ✅ fallback: very flat/simple
-                ydl_opts_simple = {
-                    "quiet": True,
-                    "skip_download": True,
-                    "ignoreerrors": True,
-                    "extract_flat": True
-                }
-                with yt_dlp.YoutubeDL(ydl_opts_simple) as ydl_simple:
-                    info = ydl_simple.extract_info(video_url, download=False)
+            info = ydl.extract_info(video_url, download=False)
 
         if not info:
-            return jsonify({
-                "title": "Unknown Title",
-                "thumbnail": None,
-                "uploader": "Unknown",
-                "duration": 0,
-                "source": "Unknown",
-                "formats": []
-            }), 200
+            return jsonify({"error": "No info extracted"}), 500
 
-        # Handle playlist → pick first entry
         if "entries" in info:
-            if info["entries"]:
-                info = info["entries"][0]
-            else:
-                return jsonify({"error": "Playlist is empty"}), 404
-
-        # ✅ Collect formats (but don’t break if none)
-        formats = []
-        for f in info.get("formats", []):
-            try:
-                if not f.get("url"):
-                    continue
-                formats.append({
-                    "format_id": f.get("format_id", "unknown"),
-                    "ext": f.get("ext", "unknown"),
-                    "resolution": f.get("resolution")
-                        or (f"{f.get('width','?')}x{f.get('height','?')}"
-                            if f.get("width") and f.get("height") else "N/A"),
-                    "filesize": f.get("filesize") or f.get("filesize_approx", 0),
-                    "note": f.get("format_note", "")
-                })
-            except Exception:
-                continue
-
-        # ✅ Best thumbnail
-        thumbnail = info.get("thumbnail")
-        if not thumbnail and info.get("thumbnails"):
-            for thumb in reversed(info["thumbnails"]):
-                if thumb.get("url"):
-                    thumbnail = thumb["url"]
-                    break
+            info = info["entries"][0]
 
         return jsonify({
             "title": info.get("title", "Untitled"),
-            "thumbnail": thumbnail,
+            "thumbnail": info.get("thumbnail"),
             "uploader": info.get("uploader", "Unknown"),
             "duration": info.get("duration", 0),
-            "source": info.get("extractor", "Unknown"),
-            "formats": formats
+            "source": info.get("extractor", "Unknown")
         })
 
     except Exception as e:
-        error_msg = f"Preview failed: {str(e)}"
-        print(f"Preview Error Details: {error_msg}")
-        return jsonify({"error": error_msg}), 500
+        return jsonify({"error": f"Preview failed: {str(e)}"}), 500
 
 
 @app.route("/download", methods=["POST"])
@@ -130,12 +71,13 @@ def download():
 
             ydl_opts = {
                 "outtmpl": file_path_template,
-                "format": "bestvideo+bestaudio/best",
+                "format": "bv*+ba/best",
                 "ffmpeg_location": ffmpeg_location,
                 "merge_output_format": "mp4",
                 "noplaylist": True,
                 "ignoreerrors": True,
                 "no_warnings": False,
+                "default_search": "auto",
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -144,31 +86,28 @@ def download():
                 if not info_dict:
                     return jsonify({"error": "Download failed - no info returned"}), 500
 
-                # ✅ This always gives correct final filename
                 final_file_path = ydl.prepare_filename(info_dict)
+                if not os.path.exists(final_file_path):
+                    # kuch cases me merged file ka naam change hota hai
+                    alt_path = os.path.splitext(final_file_path)[0] + ".mp4"
+                    if os.path.exists(alt_path):
+                        final_file_path = alt_path
+                    else:
+                        return jsonify({"error": "Download failed - file not created"}), 500
 
-            if not final_file_path or not os.path.exists(final_file_path):
-                return jsonify({"error": "Download failed - file not created"}), 500
+            safe_title = "".join(
+                c for c in info_dict.get("title", "video") if c.isalnum() or c in " _-."
+            ).rstrip()
 
-            # ✅ Clean filename
-            filename = f"{info_dict.get('title', 'video')}.mp4"
-            filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_', '.')).rstrip()
-
-            # ✅ Stream file to browser
-            def generate():
-                with open(final_file_path, "rb") as f:
-                    while chunk := f.read(8192):
-                        yield chunk
-
-            return app.response_class(
-                generate(),
-                mimetype="video/mp4",
-                headers={"Content-Disposition": f"attachment; filename={filename}"}
+            return send_file(
+                final_file_path,
+                as_attachment=True,
+                download_name=f"{safe_title}.mp4",
+                mimetype="video/mp4"
             )
 
     except Exception as e:
         return jsonify({"error": f"Download failed: {str(e)}"}), 500
-
 
 
 if __name__ == "__main__":
