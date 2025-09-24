@@ -3,97 +3,122 @@ import yt_dlp
 import os
 import uuid
 import tempfile
-import glob
 import shutil
 import mimetypes
+import imageio_ffmpeg as iio_ffmpeg
 
 app = Flask(__name__)
 
-class SimpleLogger:
-    def debug(self, msg): pass
-    def warning(self, msg): print("[yt-dlp warning]", msg)
-    def error(self, msg): print("[yt-dlp error]", msg)
+SYSTEM_FFMPEG_PATH = r"C:\ffmpeg-8.0-full_build\bin\ffmpeg.exe"
+USE_IMAGEIO_FFMPEG = True
+
+
+def get_ffmpeg_path():
+    if USE_IMAGEIO_FFMPEG:
+        try:
+            return iio_ffmpeg.get_ffmpeg_exe()
+        except Exception:
+            return "ffmpeg"
+    return SYSTEM_FFMPEG_PATH
+
 
 @app.route("/")
 def home():
     return render_template("index.html")
 
-@app.route("/download", methods=["POST"])
-def download():
+
+@app.route("/preview", methods=["POST"])
+def preview():
     video_url = request.json.get("url")
     if not video_url:
         return jsonify({"error": "No URL provided"}), 400
 
-    tmpdir = tempfile.mkdtemp(prefix="yt_download_")
-    unique_id = str(uuid.uuid4())
-    outtmpl = os.path.join(tmpdir, f"{unique_id}.%(ext)s")
+    try:
+        ydl_opts = {
+            "quiet": True,
+            "skip_download": True,
+            # ---- timeout/retry fixes ----
+            "retries": 10,
+            "fragment_retries": 10,
+            "socket_timeout": 30,
+            "http_chunk_size": 10485760,
+            "concurrent_fragment_downloads": 5,
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(video_url, download=False)
 
-    ydl_opts = {
-        "format": "bestvideo+bestaudio/best",   # try best combo, else fallback
-        "merge_output_format": "mp4",           # always merge into mp4
-        "outtmpl": outtmpl,
-        "quiet": False,
-        "no_warnings": False,
-        "ignoreerrors": False,
-        "noplaylist": True,
-        "logger": SimpleLogger(),
-        "paths": {"temp": tmpdir},
-    }
+        return jsonify({
+            "title": info.get("title"),
+            "thumbnail": info.get("thumbnail"),
+            "source": info.get("extractor")
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/download", methods=["GET", "POST"])
+def download():
+    # For POST (AJAX)
+    if request.method == "POST":
+        video_url = request.json.get("url")
+    else:  # For GET (browser download)
+        video_url = request.args.get("url")
+
+    if not video_url:
+        return jsonify({"error": "No URL provided"}), 400
 
     try:
+        ffmpeg_location = get_ffmpeg_path()
+
+        tmpdir = tempfile.mkdtemp(prefix="yt_")
+        unique_id = str(uuid.uuid4())
+        file_path_template = os.path.join(tmpdir, f"{unique_id}.%(ext)s")
+
+        ydl_opts = {
+            "outtmpl": file_path_template,
+            "format": "bestvideo+bestaudio/best",
+            "ffmpeg_location": ffmpeg_location,
+            "merge_output_format": "mp4",
+            "noplaylist": True,
+            # ---- timeout/retry fixes ----
+            "retries": 10,
+            "fragment_retries": 10,
+            "socket_timeout": 30,
+            "http_chunk_size": 10485760,
+            "concurrent_fragment_downloads": 5,
+        }
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(video_url, download=True)
-            if not info:
-                shutil.rmtree(tmpdir, ignore_errors=True)
-                return jsonify({"error": "yt-dlp returned no info for the URL"}), 500
+            info_dict = ydl.extract_info(video_url, download=True)
+            final_file_path = ydl.prepare_filename(info_dict)
 
-            entry = info["entries"][0] if "entries" in info and info["entries"] else info
-
-        # find final merged file
-        matches = glob.glob(os.path.join(tmpdir, f"{unique_id}.*"))
-        final_path = matches[0] if matches else None
-
-        if not final_path or not os.path.exists(final_path):
-            contents = os.listdir(tmpdir)
+        if not os.path.exists(final_file_path):
             shutil.rmtree(tmpdir, ignore_errors=True)
-            return jsonify({
-                "error": "Download finished but output file not found",
-                "tmpdir_contents": contents
-            }), 500
+            return jsonify({"error": "Download failed"}), 500
 
-        def generate(path):
-            try:
-                with open(path, "rb") as f:
-                    while True:
-                        chunk = f.read(8192)
-                        if not chunk:
-                            break
-                        yield chunk
-            finally:
-                shutil.rmtree(tmpdir, ignore_errors=True)
+        def generate():
+            with open(final_file_path, "rb") as f:
+                while True:
+                    chunk = f.read(8192)
+                    if not chunk:
+                        break
+                    yield chunk
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
-        title = entry.get("title") or "video"
-        safe_name = "".join(c for c in title if c.isalnum() or c in " ._-")[:200]
-        ext = os.path.splitext(final_path)[1] or ".mp4"
+        file_size = os.path.getsize(final_file_path)
+        title = info_dict.get("title", "video").replace(" ", "_")
+        headers = {
+            "Content-Disposition": f"attachment; filename={title}.mp4",
+            "Content-Length": str(file_size),
+            "Content-Type": "video/mp4",
+        }
 
-        mtype, _ = mimetypes.guess_type(final_path)
-        if not mtype:
-            mtype = "application/octet-stream"
+        return Response(generate(), headers=headers)
 
-        response = Response(generate(final_path), mimetype=mtype)
-        response.headers.set(
-            "Content-Disposition",
-            "attachment",
-            filename=f"{safe_name}{ext}"
-        )
-        return response
-
-    except yt_dlp.utils.DownloadError as de:
-        shutil.rmtree(tmpdir, ignore_errors=True)
-        return jsonify({"error": "yt-dlp download error", "detail": str(de)}), 500
     except Exception as e:
-        shutil.rmtree(tmpdir, ignore_errors=True)
-        return jsonify({"error": "Download failed", "detail": str(e)}), 500
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)

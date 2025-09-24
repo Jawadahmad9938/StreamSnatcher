@@ -162,6 +162,34 @@
       color: #ccc;
     }
 
+    /* Progress */
+    #progress-container {
+      display: none;
+      margin-top: 15px;
+      text-align: left;
+    }
+
+    #progress-bar {
+      width: 100%;
+      background: rgba(255,255,255,0.2);
+      border-radius: 8px;
+      overflow: hidden;
+      height: 18px;
+    }
+
+    #progress-fill {
+      height: 100%;
+      width: 0%;
+      background: #f9ca24;
+      transition: width 0.3s ease;
+    }
+
+    #progress-text {
+      margin-top: 8px;
+      font-size: 0.9rem;
+      color: #ddd;
+    }
+
     /* User Guide */
     .guide {
       max-width: 700px;
@@ -194,34 +222,6 @@
       font-size: 0.9rem;
       color: #aaa;
     }
-        /* Responsive */
-        @media (max-width: 768px) {
-          .hero h1 {
-            font-size: 1.6rem;
-          }
-          .hero p {
-            font-size: 0.95rem;
-          }
-          .navbar {
-            flex-direction: column;
-            align-items: flex-start;
-          }
-          .navbar div {
-            margin-top: 10px;
-          }
-        }
-    
-        @media (max-width: 480px) {
-          .hero {
-            padding: 40px 10px 15px;
-          }
-          .platforms i {
-            font-size: 1.8rem;
-          }
-          .guide {
-            padding: 15px;
-          }
-        }
   </style>
 </head>
 <body>
@@ -252,9 +252,20 @@
   <div class="container">
     <input type="text" id="video-url" placeholder="Paste video URL here..." required>
     <div id="spinner"></div>
-    <button id="download-btn">Download Video</button>
+
+    <div id="preview">
+      <img id="thumbnail" src="" width="300"><br>
+      <h3 id="title"></h3>
+      <p id="source"></p>
+      <button id="download-btn">Download Video</button>
+
+      <!-- Progress -->
+      <div id="progress-container">
+        <div id="progress-bar"><div id="progress-fill"></div></div>
+        <div id="progress-text">0% - Waiting...</div>
+      </div>
+    </div>
   </div>
-  
 
   <!-- User Guide -->
   <div class="guide" id="guide">
@@ -274,63 +285,76 @@
 
   <script>
     let currentUrl = "";
+    let currentTitle = "";
     const urlInput = document.getElementById("video-url");
     const spinner = document.getElementById("spinner");
+    const previewDiv = document.getElementById("preview");
     const downloadBtn = document.getElementById("download-btn");
-  
-    // Input listener
-    urlInput.addEventListener("input", () => {
-      currentUrl = urlInput.value.trim();
-    });
-  
-    // Download button click
-    downloadBtn.addEventListener("click", async () => {
-      if (!currentUrl) {
-        alert("⚠️ Please enter a video URL");
+    let timeout = null;
+    
+    // Auto preview on input/paste
+    function schedulePreview() {
+      clearTimeout(timeout);
+      timeout = setTimeout(getPreview, 600);
+    }
+    urlInput.addEventListener("input", schedulePreview);
+    urlInput.addEventListener("paste", () => setTimeout(schedulePreview, 100));
+    
+    async function getPreview() {
+      const url = urlInput.value.trim();
+      if (!url) {
+        previewDiv.style.display = "none";
         return;
       }
-  
+    
+      currentUrl = url;
       spinner.style.display = "block";
-  
+      previewDiv.style.display = "none";
+    
       try {
-        const res = await fetch("/download", {
+        const res = await fetch("/preview", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: currentUrl })
+          body: JSON.stringify({ url })
         });
-  
+        const data = await res.json();
         spinner.style.display = "none";
-  
-        if (!res.ok) {
-          let errMsg = "❌ Error downloading video.";
-          try {
-            const err = await res.json();
-            errMsg = "❌ Error: " + err.error + (err.detail ? ("\nDetail: " + err.detail) : "");
-          } catch (e) {
-            console.error("Error parsing backend error:", e);
-          }
-          alert(errMsg);
+    
+        if (data.error) {
+          previewDiv.style.display = "none";
+          alert("❌ Preview failed: " + data.error);
           return;
         }
-  
-        // Convert response to blob
-        const blob = await res.blob();
-        const link = document.createElement("a");
-        link.href = window.URL.createObjectURL(blob);
-  
-        // Default file name
-        link.download = "video.mp4";
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-  
+    
+        document.getElementById("thumbnail").src = data.thumbnail;
+        document.getElementById("title").innerText = data.title;
+        document.getElementById("source").innerText =
+          "Source: " + (data.source || "Unknown");
+        previewDiv.style.display = "block";
+        currentTitle = data.title;
+    
       } catch (err) {
         spinner.style.display = "none";
-        console.error("❌ Fetch error:", err);
-        alert("❌ Error: Unable to connect to server.");
+        alert("❌ Error fetching preview.");
       }
-    });
-  </script>
+    }
     
+    // ✅ Native Chrome download trigger
+    downloadBtn.addEventListener("click", () => {
+      if (!currentUrl) return alert("No video URL");
+    
+      spinner.style.display = "block";
+      previewDiv.style.display = "none";
+    
+      // Redirect directly to Flask download endpoint (GET request)
+      window.location.href = "/download?url=" + encodeURIComponent(currentUrl);
+    
+      // Reset input after triggering download
+      urlInput.value = "";
+      currentUrl = "";
+      currentTitle = "";
+    });
+    
+  </script>
 </body>
 </html>
