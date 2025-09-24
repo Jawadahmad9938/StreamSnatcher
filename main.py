@@ -136,27 +136,25 @@ def download():
                 "noplaylist": True,
                 "ignoreerrors": True,
                 "no_warnings": False,
-                "progress_hooks": [lambda d: print("Progress:", d.get("status"), d.get("_percent_str"))],
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info_dict = ydl.extract_info(video_url, download=True)
 
-            # ✅ Find actual file path
-            final_file_path = None
-            for f in os.listdir(tmpdir):
-                if f.startswith(unique_id):
-                    final_file_path = os.path.join(tmpdir, f)
-                    break
+                if not info_dict:
+                    return jsonify({"error": "Download failed - no info returned"}), 500
+
+                # ✅ This always gives correct final filename
+                final_file_path = ydl.prepare_filename(info_dict)
 
             if not final_file_path or not os.path.exists(final_file_path):
                 return jsonify({"error": "Download failed - file not created"}), 500
 
-            # ✅ Safe filename
+            # ✅ Clean filename
             filename = f"{info_dict.get('title', 'video')}.mp4"
             filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_', '.')).rstrip()
 
-            # ✅ Stream file in chunks
+            # ✅ Stream file to browser
             def generate():
                 with open(final_file_path, "rb") as f:
                     while chunk := f.read(8192):
