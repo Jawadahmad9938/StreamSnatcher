@@ -30,7 +30,7 @@ def preview():
         ydl_opts = {
             "quiet": True,
             "skip_download": True,
-            "force_generic_extractor": False,  # youtube ka proper extractor use karega
+            "force_generic_extractor": False,
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -39,17 +39,23 @@ def preview():
         if not info:
             return jsonify({"error": "Could not fetch video info"}), 404
 
-        # Agar playlist di ho to pehla item lo
+        # Agar playlist ho to first entry lo
         if "entries" in info:
             info = info["entries"][0]
 
-        # Bas basic preview ka data bhej do
+        # Jo bhi best available format mila uska info lo
+        best_format = None
+        if "formats" in info and info["formats"]:
+            best_format = info["formats"][-1]  # last item usually best hota hai
+
         return jsonify({
             "title": info.get("title"),
             "thumbnail": info.get("thumbnail"),
             "uploader": info.get("uploader"),
             "duration": info.get("duration"),
-            "source": info.get("extractor")
+            "source": info.get("extractor"),
+            "format_note": best_format.get("format_note") if best_format else None,
+            "ext": best_format.get("ext") if best_format else None,
         })
 
     except Exception as e:
