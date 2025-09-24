@@ -34,14 +34,34 @@ def preview():
         if not info:
             return jsonify({"error": "Could not fetch video info"}), 404
 
+        # Agar playlist hai, toh first entry pick kare
+        if "entries" in info:
+            info = info["entries"][0]
+
+        # Extract available formats
+        formats = []
+        for f in info.get("formats", []):
+            if f.get("filesize") or f.get("filesize_approx"):
+                formats.append({
+                    "format_id": f.get("format_id"),
+                    "ext": f.get("ext"),
+                    "resolution": f.get("resolution") or f"{f.get('width')}x{f.get('height')}",
+                    "filesize": f.get("filesize") or f.get("filesize_approx"),
+                    "format_note": f.get("format_note"),
+                })
+
         return jsonify({
             "title": info.get("title"),
             "thumbnail": info.get("thumbnail"),
-            "source": info.get("extractor")
+            "uploader": info.get("uploader"),
+            "duration": info.get("duration"),
+            "source": info.get("extractor"),
+            "formats": formats
         })
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 
 
