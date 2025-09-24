@@ -85,40 +85,28 @@ def download():
         return jsonify({"error": "No URL provided"}), 400
 
     try:
-        ffmpeg_location = get_ffmpeg_path()
+        ydl_opts = {
+            "format": "bestvideo+bestaudio/best",  # ✅ safest combo
+            "outtmpl": "%(title)s.%(ext)s",
+            "merge_output_format": "mp4",  # ensure mp4 output
+            "quiet": True,
+            "ignoreerrors": True,
+            "no_warnings": True
+        }
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            unique_id = str(uuid.uuid4())
-            temp_filename = f"{unique_id}.%(ext)s"
-            file_path_template = os.path.join(tmpdir, temp_filename)
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(video_url, download=True)
+            if not info:
+                return jsonify({"error": "Download failed - no info returned"})
 
-            ydl_opts = {
-                "outtmpl": file_path_template,
-                "format": "bestvideo+bestaudio/best",
-                "ffmpeg_location": ffmpeg_location,
-                "merge_output_format": "mp4",
-                "noplaylist": True,
-            }
+            filename = ydl.prepare_filename(info)
+            if not os.path.exists(filename):
+                return jsonify({"error": "Download failed - file not created"})
 
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info_dict = ydl.extract_info(video_url, download=True)
-                final_file_path = ydl.prepare_filename(info_dict)
-
-            if not os.path.exists(final_file_path):
-                return jsonify({"error": "Download failed"}), 500
-
-            with open(final_file_path, "rb") as f:
-                file_data = f.read()
-
-            # Force .mp4 even if Instagram sends .mkv or .webm
-            return send_file(
-                io.BytesIO(file_data),
-                as_attachment=True,
-                download_name=f"{info_dict.get('title', 'video')}.mp4"
-            )
+        return send_file(filename, as_attachment=True)
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Download failed: {str(e)}"}), 500
 
 
 if __name__ == "__main__":
