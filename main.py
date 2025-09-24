@@ -27,63 +27,94 @@ def preview():
         return jsonify({"error": "No URL provided"}), 400
 
     try:
-        # ✅ Fixed ydl_opts with better error handling
+        # ✅ More robust configuration
         ydl_opts = {
             "quiet": True,
             "skip_download": True,
+            "ignoreerrors": True,
             "no_warnings": False,
-            "ignoreerrors": True,  # ✅ Important: Continue even if some formats fail
             "extract_flat": False,
             "force_json": True,
+            "format": "best",  # ✅ Specific format selection
+            "socket_timeout": 30,
+            "extractor_args": {
+                "youtube": {
+                    "skip": ["dash", "hls"]  # ✅ Skip problematic formats
+                }
+            }
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(video_url, download=False)
+            # ✅ Try multiple approaches
+            try:
+                info = ydl.extract_info(video_url, download=False)
+            except Exception as extract_error:
+                print(f"First extract attempt failed: {extract_error}")
+                # ✅ Retry with simpler options
+                ydl_opts_simple = {
+                    "quiet": True,
+                    "skip_download": True,
+                    "ignoreerrors": True,
+                    "extract_flat": True
+                }
+                with yt_dlp.YoutubeDL(ydl_opts_simple) as ydl_simple:
+                    info = ydl_simple.extract_info(video_url, download=False)
 
         if not info:
-            return jsonify({"error": "Could not fetch video info"}), 404
+            return jsonify({"error": "Could not fetch video info. Video might be restricted or unavailable."}), 404
 
-        # Agar playlist mila ho to first entry lelo
+        # Handle playlist
         if "entries" in info:
-            info = info["entries"][0]
+            if info["entries"]:
+                info = info["entries"][0]
+            else:
+                return jsonify({"error": "Playlist is empty"}), 404
 
-        # ✅ Safer format extraction with error handling
+        # ✅ Safe format extraction
         formats = []
-        available_formats = info.get("formats", [])
-        
-        for f in available_formats:
+        for f in info.get("formats", []):
             try:
-                # ✅ Filter out None values and problematic formats
-                if f.get('format_id'):
-                    formats.append({
-                        "format_id": f.get("format_id", "unknown"),
-                        "ext": f.get("ext", "unknown"),
-                        "resolution": f.get("resolution") or 
-                                    f"{f.get('width', '')}x{f.get('height', '')}" or "N/A",
-                        "filesize": f.get("filesize") or f.get("filesize_approx", 0),
-                        "format_note": f.get("format_note", ""),
-                    })
-            except Exception as format_error:
-                # Skip problematic formats but continue processing
-                print(f"Skipping format due to error: {format_error}")
+                format_info = {
+                    "format_id": f.get("format_id", "unknown"),
+                    "ext": f.get("ext", "unknown"),
+                    "resolution": "N/A",
+                    "filesize": f.get("filesize") or f.get("filesize_approx", 0),
+                    "format_note": f.get("format_note", ""),
+                }
+                
+                # ✅ Better resolution detection
+                if f.get("resolution"):
+                    format_info["resolution"] = f["resolution"]
+                elif f.get("width") and f.get("height"):
+                    format_info["resolution"] = f"{f['width']}x{f['height']}"
+                
+                formats.append(format_info)
+            except Exception:
                 continue
 
-        # ✅ Fallback thumbnail selection
-        thumbnail = info.get('thumbnail') or info.get('thumbnails', [{}])[0].get('url') if info.get('thumbnails') else None
+        # ✅ Get best available thumbnail
+        thumbnail = info.get("thumbnail")
+        if not thumbnail and info.get("thumbnails"):
+            for thumb in reversed(info["thumbnails"]):  # Get highest quality thumbnail
+                if thumb.get("url"):
+                    thumbnail = thumb["url"]
+                    break
 
         return jsonify({
-            "title": info.get("title", "Unknown Title"),
+            "title": info.get("title", "Untitled"),
             "thumbnail": thumbnail,
-            "uploader": info.get("uploader", "Unknown Uploader"),
+            "uploader": info.get("uploader", "Unknown"),
             "duration": info.get("duration", 0),
-            "source": info.get("extractor", "Unknown Source"),
+            "source": info.get("extractor", "Unknown"),
             "formats": formats
         })
 
     except Exception as e:
-        print(f"Preview Error: {str(e)}")  # ✅ Debug logging
-        return jsonify({"error": f"Preview failed: {str(e)}"}), 500
-
+        error_msg = f"Preview failed: {str(e)}"
+        print(f"Preview Error Details: {error_msg}")
+        return jsonify({"error": error_msg}), 500
+    
+    
 
 @app.route("/download", methods=["POST"])
 def download():
