@@ -274,18 +274,21 @@
 
   <script>
     let currentUrl = "";
-    let currentTitle = "";
     const urlInput = document.getElementById("video-url");
     const spinner = document.getElementById("spinner");
     const downloadBtn = document.getElementById("download-btn");
   
-    // Just take input value
+    // Input listener
     urlInput.addEventListener("input", () => {
       currentUrl = urlInput.value.trim();
     });
   
+    // Download button click
     downloadBtn.addEventListener("click", async () => {
-      if (!currentUrl) return alert("⚠️ Please enter a video URL");
+      if (!currentUrl) {
+        alert("⚠️ Please enter a video URL");
+        return;
+      }
   
       spinner.style.display = "block";
   
@@ -299,24 +302,35 @@
         spinner.style.display = "none";
   
         if (!res.ok) {
-          const err = await res.json();
-          alert("❌ Error: " + err.error);
+          let errMsg = "❌ Error downloading video.";
+          try {
+            const err = await res.json();
+            errMsg = "❌ Error: " + err.error + (err.detail ? ("\nDetail: " + err.detail) : "");
+          } catch (e) {
+            console.error("Error parsing backend error:", e);
+          }
+          alert(errMsg);
           return;
         }
   
-        // Stream response as blob
+        // Convert response to blob
         const blob = await res.blob();
         const link = document.createElement("a");
         link.href = window.URL.createObjectURL(blob);
-        link.download = "video.mp4"; // Default file name
+  
+        // Default file name
+        link.download = "video.mp4";
+        document.body.appendChild(link);
         link.click();
+        link.remove();
   
       } catch (err) {
         spinner.style.display = "none";
-        alert("❌ Error downloading video.");
+        console.error("❌ Fetch error:", err);
+        alert("❌ Error: Unable to connect to server.");
       }
     });
   </script>
-  
+    
 </body>
 </html>

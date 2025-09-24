@@ -13,7 +13,7 @@ def get_ffmpeg_path():
     try:
         return iio_ffmpeg.get_ffmpeg_exe()
     except Exception:
-        return "ffmpeg"  # fallback to system ffmpeg
+        return "ffmpeg"
 
 class SimpleLogger:
     def debug(self, msg): pass
@@ -37,15 +37,13 @@ def download():
     ydl_opts = {
         "format": "bestvideo+bestaudio/best",
         "outtmpl": outtmpl,
-        # ensure merging works
         "merge_output_format": "mp4",
         "ffmpeg_location": get_ffmpeg_path(),
-        # helpful for debugging; remove or reduce verbosity in production
         "quiet": False,
         "no_warnings": False,
         "ignoreerrors": False,
+        "noplaylist": True,  # 👈 fix playlist issue
         "logger": SimpleLogger(),
-        # do not write to home directory unexpectedly
         "paths": {"temp": tmpdir},
     }
 
@@ -55,13 +53,8 @@ def download():
             if not info:
                 return jsonify({"error": "yt-dlp returned no info for the URL"}), 500
 
-            # If it's a playlist or has entries, pick first entry
-            if "entries" in info and info["entries"]:
-                entry = info["entries"][0]
-            else:
-                entry = info
+            entry = info["entries"][0] if "entries" in info and info["entries"] else info
 
-            # Attempt to get prepared filename; if not found, glob in tmpdir
             try:
                 possible_filename = ydl.prepare_filename(entry)
             except Exception:
@@ -71,22 +64,17 @@ def download():
             if possible_filename and os.path.exists(possible_filename):
                 final_path = possible_filename
             else:
-                # fallback: find any file that starts with unique_id in tmpdir
                 matches = glob.glob(os.path.join(tmpdir, f"{unique_id}.*"))
                 if matches:
-                    # prefer .mp4 if exists
                     mp4s = [m for m in matches if m.lower().endswith(".mp4")]
                     final_path = mp4s[0] if mp4s else matches[0]
 
             if not final_path or not os.path.exists(final_path):
-                # List tmpdir contents to help debugging
-                contents = os.listdir(tmpdir)
                 return jsonify({
                     "error": "Download finished but output file not found",
-                    "tmpdir_contents": contents
+                    "tmpdir_contents": os.listdir(tmpdir)
                 }), 500
 
-            # streaming generator
             def generate(path):
                 try:
                     with open(path, "rb") as f:
@@ -96,7 +84,6 @@ def download():
                                 break
                             yield chunk
                 finally:
-                    # cleanup after streaming
                     try:
                         shutil.rmtree(tmpdir)
                     except Exception:
@@ -109,7 +96,6 @@ def download():
             return response
 
     except yt_dlp.utils.DownloadError as de:
-        # yt-dlp specific download errors
         return jsonify({"error": "yt-dlp download error", "detail": str(de)}), 500
     except Exception as e:
         return jsonify({"error": "Download failed", "detail": str(e)}), 500
