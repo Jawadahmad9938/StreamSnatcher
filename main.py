@@ -5,13 +5,8 @@ import uuid
 import io
 import tempfile
 import imageio_ffmpeg as iio_ffmpeg
-import logging
 
 app = Flask(__name__)
-
-# Setup logging for debugging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 def get_ffmpeg_path():
     try:
@@ -32,112 +27,67 @@ def preview():
         return jsonify({"error": "No URL provided"}), 400
 
     try:
-        # 🔥 Enhanced yt-dlp options for better compatibility
+        # ✅ Fixed ydl_opts with better error handling
         ydl_opts = {
             "quiet": True,
             "skip_download": True,
             "no_warnings": False,
-            "extractaudio": False,
-            "writeinfojson": False,
-            "ignoreerrors": True,
-            # 👇 Key additions for stability
-            "geo_bypass": True,
-            "nocheckcertificate": True,
-            "source_address": "0.0.0.0",
-            # 👇 User agent to avoid blocking
-            "http_headers": {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
+            "ignoreerrors": True,  # ✅ Important: Continue even if some formats fail
+            "extract_flat": False,
+            "force_json": True,
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # 🔥 Add error handling for extraction
-            try:
-                info = ydl.extract_info(video_url, download=False)
-            except yt_dlp.utils.DownloadError as e:
-                logger.error(f"DownloadError: {str(e)}")
-                return jsonify({"error": f"Video access error: {str(e)}"}), 400
-            except Exception as e:
-                logger.error(f"Extraction error: {str(e)}")
-                return jsonify({"error": f"Could not extract video info: {str(e)}"}), 500
+            info = ydl.extract_info(video_url, download=False)
 
         if not info:
             return jsonify({"error": "Could not fetch video info"}), 404
 
-        # Handle playlist case
+        # Agar playlist mila ho to first entry lelo
         if "entries" in info:
-            if not info["entries"]:
-                return jsonify({"error": "Playlist is empty"}), 404
             info = info["entries"][0]
 
-        # 🔥 Better format handling with error checking
+        # ✅ Safer format extraction with error handling
         formats = []
         available_formats = info.get("formats", [])
         
-        if not available_formats:
-            logger.warning("No formats available for this video")
-            # Try to get basic info anyway
-            return jsonify({
-                "title": info.get("title", "Unknown"),
-                "thumbnail": info.get("thumbnail"),
-                "uploader": info.get("uploader", "Unknown"),
-                "duration": info.get("duration"),
-                "source": info.get("extractor", "Unknown"),
-                "formats": [],
-                "warning": "No downloadable formats available"
-            })
-
         for f in available_formats:
             try:
-                # 🔥 Safe format processing
-                width = f.get("width")
-                height = f.get("height")
-                resolution = f.get("resolution")
-                
-                if not resolution and width and height:
-                    resolution = f"{width}x{height}"
-                elif not resolution:
-                    resolution = "Unknown"
-
-                formats.append({
-                    "format_id": f.get("format_id", "unknown"),
-                    "ext": f.get("ext", "unknown"),
-                    "resolution": resolution,
-                    "filesize": f.get("filesize") or f.get("filesize_approx"),
-                    "format_note": f.get("format_note", ""),
-                    "vcodec": f.get("vcodec", "unknown"),
-                    "acodec": f.get("acodec", "unknown"),
-                })
+                # ✅ Filter out None values and problematic formats
+                if f.get('format_id'):
+                    formats.append({
+                        "format_id": f.get("format_id", "unknown"),
+                        "ext": f.get("ext", "unknown"),
+                        "resolution": f.get("resolution") or 
+                                    f"{f.get('width', '')}x{f.get('height', '')}" or "N/A",
+                        "filesize": f.get("filesize") or f.get("filesize_approx", 0),
+                        "format_note": f.get("format_note", ""),
+                    })
             except Exception as format_error:
-                logger.warning(f"Error processing format: {format_error}")
+                # Skip problematic formats but continue processing
+                print(f"Skipping format due to error: {format_error}")
                 continue
 
-        # 🔥 Return comprehensive info
-        response_data = {
-            "title": info.get("title", "Unknown Title"),
-            "thumbnail": info.get("thumbnail"),
-            "uploader": info.get("uploader", "Unknown"),
-            "duration": info.get("duration"),
-            "source": info.get("extractor", "Unknown"),
-            "formats": formats,
-            "view_count": info.get("view_count"),
-            "upload_date": info.get("upload_date"),
-            "description": info.get("description", "")[:200] + "..." if info.get("description") and len(info.get("description", "")) > 200 else info.get("description", "")
-        }
+        # ✅ Fallback thumbnail selection
+        thumbnail = info.get('thumbnail') or info.get('thumbnails', [{}])[0].get('url') if info.get('thumbnails') else None
 
-        logger.info(f"Successfully extracted info for: {response_data['title']}")
-        return jsonify(response_data)
+        return jsonify({
+            "title": info.get("title", "Unknown Title"),
+            "thumbnail": thumbnail,
+            "uploader": info.get("uploader", "Unknown Uploader"),
+            "duration": info.get("duration", 0),
+            "source": info.get("extractor", "Unknown Source"),
+            "formats": formats
+        })
 
     except Exception as e:
-        logger.error(f"Preview error: {str(e)}")
-        return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
+        print(f"Preview Error: {str(e)}")  # ✅ Debug logging
+        return jsonify({"error": f"Preview failed: {str(e)}"}), 500
 
 
 @app.route("/download", methods=["POST"])
 def download():
     video_url = request.json.get("url")
-    format_id = request.json.get("format_id")  # Optional specific format
-    
     if not video_url:
         return jsonify({"error": "No URL provided"}), 400
 
@@ -149,75 +99,43 @@ def download():
             temp_filename = f"{unique_id}.%(ext)s"
             file_path_template = os.path.join(tmpdir, temp_filename)
 
-            # 🔥 Enhanced download options
+            # ✅ More robust download options
             ydl_opts = {
                 "outtmpl": file_path_template,
+                "format": "bestvideo+bestaudio/best",
                 "ffmpeg_location": ffmpeg_location,
                 "merge_output_format": "mp4",
                 "noplaylist": True,
-                "ignoreerrors": False,
+                "ignoreerrors": True,  # ✅ Important addition
                 "no_warnings": False,
-                # 👇 Better format selection
-                "format": format_id if format_id else "best[height<=720]/best",
-                # 👇 Fallback options
-                "format_sort": ["res:720", "ext:mp4:m4a"],
-                # 👇 Network improvements
-                "geo_bypass": True,
-                "nocheckcertificate": True,
-                "http_headers": {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                }
+                "http_chunk_size": 10485760,  # ✅ Better for large files
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                try:
-                    info_dict = ydl.extract_info(video_url, download=True)
-                except yt_dlp.utils.DownloadError as e:
-                    logger.error(f"Download error: {str(e)}")
-                    return jsonify({"error": f"Download failed: {str(e)}"}), 400
+                info_dict = ydl.extract_info(video_url, download=True)
+                final_file_path = ydl.prepare_filename(info_dict)
 
-            # 🔥 Better file path handling
-            if "entries" in info_dict:
-                info_dict = info_dict["entries"][0]
-                
-            final_file_path = ydl.prepare_filename(info_dict)
-            
-            # 🔥 Check for actual downloaded file
             if not os.path.exists(final_file_path):
-                # Try different extensions
-                base_path = os.path.splitext(final_file_path)[0]
-                for ext in ['.mp4', '.webm', '.mkv', '.avi']:
-                    test_path = base_path + ext
-                    if os.path.exists(test_path):
-                        final_file_path = test_path
-                        break
-                else:
-                    return jsonify({"error": "Downloaded file not found"}), 500
+                return jsonify({"error": "Download failed - file not created"}), 500
 
-            # 🔥 Safe filename
-            safe_title = "".join(c for c in info_dict.get('title', 'video') if c.isalnum() or c in (' ', '-', '_')).rstrip()
-            download_name = f"{safe_title}.mp4"
-
-            logger.info(f"Sending file: {final_file_path}")
+            # ✅ Better file handling
+            file_handle = open(final_file_path, "rb")
+            filename = f"{info_dict.get('title', 'video')}.mp4"
+            
+            # ✅ Clean special characters from filename
+            filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_', '.')).rstrip()
             
             return send_file(
-                final_file_path,
+                file_handle,
                 as_attachment=True,
-                download_name=download_name,
+                download_name=filename,
                 mimetype="video/mp4"
             )
 
     except Exception as e:
-        logger.error(f"Download error: {str(e)}")
         return jsonify({"error": f"Download failed: {str(e)}"}), 500
-
-
-@app.route("/health", methods=["GET"])
-def health_check():
-    """Health check endpoint for production monitoring"""
-    return jsonify({"status": "healthy", "service": "youtube-downloader"}), 200
-
+    
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)  # Production ke liye debug=False
+    app.run(host="0.0.0.0", port=port, debug=True)
