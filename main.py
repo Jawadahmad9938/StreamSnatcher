@@ -27,7 +27,8 @@ def preview():
         return jsonify({"error": "No URL provided"}), 400
 
     try:
-        ydl_opts = {"quiet": True, "skip_download": True}
+        # Added "ignoreerrors": True for safer metadata extraction
+        ydl_opts = {"quiet": True, "skip_download": True, "ignoreerrors": True}
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=False)
 
@@ -55,9 +56,10 @@ def download():
             temp_filename = f"{unique_id}.%(ext)s"
             file_path_template = os.path.join(tmpdir, temp_filename)
 
+            # ✅ Change 1: safer format selection
             ydl_opts = {
                 "outtmpl": file_path_template,
-                "format": "bestvideo+bestaudio/best",
+                "format": "bv*+ba/best",
                 "ffmpeg_location": ffmpeg_location,
                 "merge_output_format": "mp4",
                 "noplaylist": True,
@@ -70,11 +72,9 @@ def download():
             if not os.path.exists(final_file_path):
                 return jsonify({"error": "Download failed"}), 500
 
-            with open(final_file_path, "rb") as f:
-                file_data = f.read()
-
+            # ✅ Change 2: stream file instead of reading full into memory
             return send_file(
-                io.BytesIO(file_data),
+                open(final_file_path, "rb"),
                 as_attachment=True,
                 download_name=f"{info_dict.get('title', 'video')}.mp4"
             )
