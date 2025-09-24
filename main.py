@@ -126,8 +126,7 @@ def download():
 
         with tempfile.TemporaryDirectory() as tmpdir:
             unique_id = str(uuid.uuid4())
-            temp_filename = f"{unique_id}.%(ext)s"
-            file_path_template = os.path.join(tmpdir, temp_filename)
+            file_path_template = os.path.join(tmpdir, f"{unique_id}.%(ext)s")
 
             ydl_opts = {
                 "outtmpl": file_path_template,
@@ -137,29 +136,41 @@ def download():
                 "noplaylist": True,
                 "ignoreerrors": True,
                 "no_warnings": False,
-                "http_chunk_size": 10485760,
+                "progress_hooks": [lambda d: print("Progress:", d.get("status"), d.get("_percent_str"))],
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info_dict = ydl.extract_info(video_url, download=True)
-                final_file_path = ydl.prepare_filename(info_dict)
 
-            if not os.path.exists(final_file_path):
+            # ✅ Find actual file path
+            final_file_path = None
+            for f in os.listdir(tmpdir):
+                if f.startswith(unique_id):
+                    final_file_path = os.path.join(tmpdir, f)
+                    break
+
+            if not final_file_path or not os.path.exists(final_file_path):
                 return jsonify({"error": "Download failed - file not created"}), 500
 
-            file_handle = open(final_file_path, "rb")
+            # ✅ Safe filename
             filename = f"{info_dict.get('title', 'video')}.mp4"
             filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_', '.')).rstrip()
 
-            return send_file(
-                file_handle,
-                as_attachment=True,
-                download_name=filename,
-                mimetype="video/mp4"
+            # ✅ Stream file in chunks
+            def generate():
+                with open(final_file_path, "rb") as f:
+                    while chunk := f.read(8192):
+                        yield chunk
+
+            return app.response_class(
+                generate(),
+                mimetype="video/mp4",
+                headers={"Content-Disposition": f"attachment; filename={filename}"}
             )
 
     except Exception as e:
         return jsonify({"error": f"Download failed: {str(e)}"}), 500
+
 
 
 if __name__ == "__main__":
