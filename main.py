@@ -27,19 +27,32 @@ def preview():
         return jsonify({"error": "No URL provided"}), 400
 
     try:
-        # yt-dlp works for YouTube + Instagram + many others
-        ydl_opts = {"quiet": True, "skip_download": True}
+        # Metadata only (no format forcing)
+        ydl_opts = {
+            "quiet": True,
+            "skip_download": True,
+            "ignoreerrors": True,
+            "extract_flat": True,   # ✅ only metadata, no format requests
+        }
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=False)
 
+        if not info:
+            return jsonify({"error": "Could not fetch video info"}), 404
+
+        # If playlist, pick first entry
+        if "entries" in info and info["entries"]:
+            info = info["entries"][0]
+
         return jsonify({
-            "title": info.get("title"),
+            "title": info.get("title", "Untitled"),
             "thumbnail": info.get("thumbnail"),
-            "source": info.get("extractor")   # shows youtube / instagram
+            "source": info.get("extractor", "unknown")
         })
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Preview failed: {str(e)}"}), 500
 
 
 @app.route("/download", methods=["POST"])
