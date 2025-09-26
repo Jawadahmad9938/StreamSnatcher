@@ -9,6 +9,7 @@ app = Flask(__name__)
 
 SYSTEM_FFMPEG_PATH = "/usr/bin/ffmpeg"
 USE_IMAGEIO_FFMPEG = True
+COOKIES_FILE = "/var/www/streamsnatcher/cookies.txt"  # cookies file path
 
 
 def get_ffmpeg_path():
@@ -20,6 +21,19 @@ def get_ffmpeg_path():
         except Exception:
             ffmpeg_location = iio_ffmpeg.get_ffmpeg_exe()
     return ffmpeg_location
+
+
+def base_ydl_opts(extra=None):
+    """yt-dlp base options with cookies support"""
+    opts = {
+        "quiet": True,
+    }
+    # agar cookies file exist karti hai to use karo
+    if os.path.exists(COOKIES_FILE):
+        opts["cookiefile"] = COOKIES_FILE
+    if extra:
+        opts.update(extra)
+    return opts
 
 
 @app.route("/")
@@ -34,10 +48,7 @@ def preview():
         return jsonify({"error": "No URL provided"}), 400
 
     try:
-        ydl_opts = {
-            "quiet": True,
-            "skip_download": True,
-        }
+        ydl_opts = base_ydl_opts({"skip_download": True})
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=False)
 
@@ -61,13 +72,12 @@ def download():
         temp_dir = tempfile.mkdtemp()
         output_path = os.path.join(temp_dir, f"{uuid.uuid4()}.mp4")
 
-        ydl_opts = {
-            "quiet": True,
+        ydl_opts = base_ydl_opts({
             "merge_output_format": "mp4",
             "outtmpl": output_path,
             "ffmpeg_location": get_ffmpeg_path(),
             "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]",
-        }
+        })
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=True)
@@ -81,9 +91,6 @@ def download():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-    
-
 
 if __name__ == "__main__":
     app.run(debug=False, host="0.0.0.0", port=5000)
-
