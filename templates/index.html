@@ -226,6 +226,114 @@
         font-size: 0.9rem;
         color: #aaa;
       }
+      /* Existing styles remain the same... */
+
+      /* Responsive Design */
+      @media (max-width: 768px) {
+        .navbar {
+          flex-direction: column;
+          align-items: flex-start;
+          padding: 10px 20px;
+        }
+
+        .navbar h2 {
+          font-size: 1.3rem;
+          margin-bottom: 10px;
+        }
+
+        .navbar div {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+
+        .hero {
+          padding: 40px 15px 15px;
+        }
+
+        .hero h1 {
+          font-size: 1.8rem;
+        }
+
+        .hero p {
+          font-size: 1rem;
+        }
+
+        .platforms {
+          gap: 15px;
+        }
+
+        .platforms i {
+          font-size: 1.8rem;
+        }
+
+        .container {
+          width: 90%;
+          padding: 20px;
+        }
+
+        input[type="text"] {
+          width: 100%;
+          font-size: 0.95rem;
+        }
+
+        button {
+          width: 100%;
+          padding: 12px;
+          font-size: 1rem;
+        }
+
+        #preview img {
+          max-width: 100%;
+          height: auto;
+        }
+
+        .guide {
+          width: 90%;
+          margin: 30px auto;
+          font-size: 0.95rem;
+        }
+
+        .guide h2 {
+          font-size: 1.2rem;
+        }
+
+        footer {
+          font-size: 0.8rem;
+          padding: 15px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .navbar {
+          padding: 10px;
+        }
+
+        .navbar h2 {
+          font-size: 1.1rem;
+        }
+
+        .navbar a {
+          font-size: 0.85rem;
+          margin-left: 10px;
+        }
+
+        .hero h1 {
+          font-size: 1.5rem;
+        }
+
+        .hero p {
+          font-size: 0.9rem;
+        }
+
+        .platforms i {
+          font-size: 1.6rem;
+        }
+
+        button {
+          font-size: 0.9rem;
+        }
+      }
     </style>
   </head>
   <body>
