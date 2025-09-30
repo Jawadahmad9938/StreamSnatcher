@@ -3,11 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>StreamSnatcher 🎬</title>
+    <title>SocialStream</title>
     <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='style.css') }}"
+      rel="icon"
+      type="image/png"
+      href="https://i.ibb.co/BVJVdGqL/logo-removebg-preview.png"
     />
+
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
@@ -15,40 +17,107 @@
     <style>
       body {
         font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-        background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+        background: linear-gradient(135deg, #009ffd, #2a2a72, #f09819);
+        background-size: 400% 400%;
+        animation: gradientShift 15s ease infinite;
         color: #fff;
         margin: 0;
         padding: 0;
       }
 
+      @keyframes gradientShift {
+        0% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+        100% {
+          background-position: 0% 50%;
+        }
+      }
+
       .navbar {
-        background: rgba(0, 0, 0, 0.85);
+        background: rgba(0, 0, 0, 0.7);
         padding: 15px 30px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
         position: sticky;
         top: 0;
         z-index: 1000;
       }
 
-      .navbar h2 {
-        margin: 0;
-        font-size: 1.6rem;
-        color: #f9ca24;
+      .navbar .logo img {
+        height: 40px;
+        width: auto;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 20px;
       }
 
       .navbar a {
         color: #fff;
-        margin-left: 20px;
         text-decoration: none;
         font-weight: 500;
         transition: 0.3s;
       }
 
       .navbar a:hover {
-        color: #f9ca24;
+        color: #f09819;
+      }
+
+      .menu-toggle {
+        display: none;
+        font-size: 2rem;
+        cursor: pointer;
+        color: #fff;
+      }
+
+      @media (max-width: 768px) {
+        .menu-toggle {
+          display: block;
+        }
+
+        .nav-links {
+          position: absolute;
+          top: 70px;
+          left: 0;
+          right: 0;
+          background: rgba(0, 0, 0, 0.95);
+          flex-direction: column;
+          align-items: center;
+          gap: 15px;
+          padding: 20px 0;
+          display: none;
+          border-radius: 0 0 12px 12px;
+          animation: slideDown 0.4s ease;
+        }
+
+        .nav-links.show {
+          display: flex;
+        }
+
+        .nav-links a {
+          font-size: 1.2rem;
+          width: 100%;
+          text-align: center;
+          padding: 10px 0;
+        }
+
+        @keyframes slideDown {
+          from {
+            transform: translateY(-20px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
       }
 
       .hero {
@@ -59,13 +128,8 @@
       .hero h1 {
         font-size: 2.4rem;
         margin-bottom: 10px;
-        color: #f9ca24;
-      }
-
-      .hero p {
-        font-size: 1.1rem;
-        color: #ddd;
-        margin-bottom: 25px;
+        color: #ffda79;
+        text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
       }
 
       .platforms {
@@ -76,23 +140,72 @@
         flex-wrap: wrap;
       }
 
-      .platforms i {
-        font-size: 2.3rem;
-        transition: transform 0.3s ease;
+      .platform {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 15px;
+        border-radius: 12px;
+        color: #fff;
+        cursor: pointer;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
       }
 
-      .platforms i:hover {
-        transform: scale(1.2);
-        color: #f9ca24;
+      .platform i {
+        font-size: 2.3rem;
+        animation: pulse 2s infinite;
+      }
+
+      .platform span {
+        font-size: 0.9rem;
+        font-weight: 500;
+      }
+
+      .platform:hover {
+        transform: scale(1.1);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+      }
+
+      .platform.youtube {
+        background: #ff0000;
+      }
+
+      .platform.instagram {
+        background: linear-gradient(45deg, #fd1d1d, #e1306c, #c13584, #833ab4);
+      }
+
+      .platform.tiktok {
+        background: linear-gradient(45deg, #69c9d0, #010101, #ee1d52);
+      }
+
+      .platform.facebook {
+        background: #1877f2;
+      }
+
+      .platform.snapchat {
+        background: #fffc00;
+        color: #000;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.15);
+        }
       }
 
       .container {
         max-width: 600px;
         margin: 0 auto 50px;
         padding: 30px;
-        background: rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.1);
         border-radius: 15px;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
         text-align: center;
       }
 
@@ -106,13 +219,13 @@
       }
 
       input[type="text"]:focus {
-        outline: 2px solid #f9ca24;
+        outline: 2px solid #f09819;
       }
 
       button {
-        background: #f9ca24;
+        background: linear-gradient(45deg, #ff512f, #f09819);
         border: none;
-        color: #222;
+        color: #fff;
         padding: 12px 25px;
         font-size: 1rem;
         font-weight: bold;
@@ -122,9 +235,121 @@
       }
 
       button:hover {
-        background: #ffe55c;
+        background: linear-gradient(45deg, #f09819, #ffda79);
         transform: scale(1.05);
       }
+
+      .guide {
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 30px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 15px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      .guide h2 {
+        color: #ffda79;
+        font-size: 1.6rem;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      .guide-steps {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+      }
+
+      .step {
+        background: rgba(0, 0, 0, 0.95);
+        padding: 20px;
+        border-radius: 12px;
+        text-align: center;
+        transition: transform 0.3s ease;
+      }
+
+      .step:hover {
+        transform: translateY(-5px);
+      }
+
+      .step i {
+        font-size: 2rem;
+        margin-bottom: 10px;
+        background: linear-gradient(45deg, #009ffd, #8e2de2, #ff512f);
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .step p {
+        font-size: 0.95rem;
+        color: #eee;
+      }
+
+      footer {
+        background: #222;
+        color: #fff;
+        text-align: center;
+        padding: 20px 10px;
+        margin-top: 30px;
+        font-size: 14px;
+      }
+      
+      footer p {
+        margin: 0;
+        font-size: 15px;
+      }
+      
+      footer a {
+        color: #00aced;
+        text-decoration: none;
+        margin: 0 5px;
+        font-weight: bold;
+      }
+      
+      footer a:hover {
+        text-decoration: underline;
+      }
+      
+      .social-links {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 18px;
+        flex-wrap: wrap;
+      }
+      
+      .social-links a {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 18px;
+        border-radius: 8px;
+        color: #fff;
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 14px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+      }
+      
+      .social-links a:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      }
+
+      .social-links .facebook {
+        background: #1877f2;
+      }
+      .social-links .twitter {
+        background: #1da1f2;
+      }
+      .social-links .instagram {
+        background: linear-gradient(45deg, #fd1d1d, #e1306c, #c13584, #833ab4);
+      }
+      .social-links .linkedin {
+        background: #0077b5;
+      }
+      
 
       #spinner {
         border: 4px solid rgba(255, 255, 255, 0.2);
@@ -167,179 +392,19 @@
         font-size: 0.9rem;
         color: #ccc;
       }
-
-      #progress-container {
-        display: none;
-        margin-top: 15px;
-        text-align: left;
-      }
-
-      #progress-bar {
-        width: 100%;
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 8px;
-        overflow: hidden;
-        height: 18px;
-      }
-
-      #progress-fill {
-        height: 100%;
-        width: 0%;
-        background: #f9ca24;
-        transition: width 0.3s ease;
-      }
-
-      #progress-text {
-        margin-top: 8px;
-        font-size: 0.9rem;
-        color: #ddd;
-      }
-
-      .guide {
-        max-width: 700px;
-        margin: 40px auto;
-        padding: 20px;
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
-      }
-
-      .guide h2 {
-        color: #f9ca24;
-        font-size: 1.4rem;
-        margin-bottom: 10px;
-      }
-
-      .guide ol {
-        padding-left: 20px;
-      }
-
-      .guide li {
-        margin-bottom: 10px;
-        line-height: 1.5;
-      }
-
-      footer {
-        margin-top: 40px;
-        padding: 20px;
-        background: rgba(0, 0, 0, 0.7);
-        text-align: center;
-        font-size: 0.9rem;
-        color: #aaa;
-      }
-      /* Existing styles remain the same... */
-
-      /* Responsive Design */
-      @media (max-width: 768px) {
-        .navbar {
-          flex-direction: column;
-          align-items: flex-start;
-          padding: 10px 20px;
-        }
-
-        .navbar h2 {
-          font-size: 1.3rem;
-          margin-bottom: 10px;
-        }
-
-        .navbar div {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 10px;
-        }
-
-        .hero {
-          padding: 40px 15px 15px;
-        }
-
-        .hero h1 {
-          font-size: 1.8rem;
-        }
-
-        .hero p {
-          font-size: 1rem;
-        }
-
-        .platforms {
-          gap: 15px;
-        }
-
-        .platforms i {
-          font-size: 1.8rem;
-        }
-
-        .container {
-          width: 80%;
-          padding: 20px;
-        }
-
-        input[type="text"] {
-          width: 90%;
-          font-size: 0.95rem;
-        }
-
-        button {
-          width: 100%;
-          padding: 12px;
-          font-size: 1rem;
-        }
-
-        #preview img {
-          max-width: 100%;
-          height: auto;
-        }
-
-        .guide {
-          width: 90%;
-          margin: 30px auto;
-          font-size: 0.95rem;
-        }
-
-        .guide h2 {
-          font-size: 1.2rem;
-        }
-
-        footer {
-          font-size: 0.8rem;
-          padding: 15px;
-        }
-      }
-
-      @media (max-width: 480px) {
-        .navbar {
-          padding: 10px;
-        }
-
-        .navbar h2 {
-          font-size: 1.1rem;
-        }
-
-        .navbar a {
-          font-size: 0.85rem;
-          margin-left: 10px;
-        }
-
-        .hero h1 {
-          font-size: 1.5rem;
-        }
-
-        .hero p {
-          font-size: 0.9rem;
-        }
-
-        .platforms i {
-          font-size: 1.6rem;
-        }
-
-        button {
-          font-size: 0.9rem;
-        }
-      }
     </style>
   </head>
   <body>
+
     <div class="navbar">
-      <h2>🎭 StreamSnatcher</h2>
-      <div>
+      <div class="logo">
+        <img
+          src="https://i.ibb.co/BVJVdGqL/logo-removebg-preview.png"
+          alt="Logo"
+        />
+      </div>
+      <div class="menu-toggle"><i class="fas fa-bars"></i></div>
+      <div class="nav-links">
         <a href="#home">Home</a>
         <a href="#guide">User Guide</a>
         <a href="#contact">Contact</a>
@@ -348,16 +413,27 @@
 
     <div class="hero" id="home">
       <h1>Download Videos Instantly</h1>
-      <p>
-        Supports <b>YouTube</b>, <b>Instagram</b>, <b>TikTok</b>,
-        <b>Facebook</b>, <b>Snapchat</b>
-      </p>
       <div class="platforms">
-        <i class="fab fa-youtube" style="color: #ff0000"></i>
-        <i class="fab fa-instagram" style="color: #e1306c"></i>
-        <i class="fab fa-tiktok" style="color: #69c9d0"></i>
-        <i class="fab fa-facebook" style="color: #1877f2"></i>
-        <i class="fab fa-snapchat" style="color: #fffc00"></i>
+        <div class="platform youtube">
+          <i class="fab fa-youtube"></i>
+          <span>YouTube</span>
+        </div>
+        <div class="platform instagram">
+          <i class="fab fa-instagram"></i>
+          <span>Instagram</span>
+        </div>
+        <div class="platform tiktok">
+          <i class="fab fa-tiktok"></i>
+          <span>TikTok</span>
+        </div>
+        <div class="platform facebook">
+          <i class="fab fa-facebook"></i>
+          <span>Facebook</span>
+        </div>
+        <div class="platform snapchat">
+          <i class="fab fa-snapchat"></i>
+          <span>Snapchat</span>
+        </div>
       </div>
     </div>
 
@@ -375,32 +451,54 @@
         <h3 id="title"></h3>
         <p id="source"></p>
         <button id="download-btn">Download Video</button>
-
-        <div id="progress-container">
-          <div id="progress-bar"><div id="progress-fill"></div></div>
-          <div id="progress-text">0% - Waiting...</div>
-        </div>
       </div>
     </div>
 
     <div class="guide" id="guide">
-      <h2>📘 How to Use StreamSnatcher</h2>
-      <ol>
-        <li>
-          Copy the link of any <b>YouTube, Instagram, TikTok, Facebook</b> or
-          <b>Snapchat</b> video.
-        </li>
-        <li>Paste the link in the input box above.</li>
-        <li>Preview will load automatically with video thumbnail & title.</li>
-        <li>
-          Click the <b>Download Video</b> button to save it to your device.
-        </li>
-      </ol>
+      <h2>📘 How to Use SocialStream</h2>
+      <div class="guide-steps">
+        <div class="step">
+          <i class="fas fa-link"></i>
+          <p>Copy the link of any YouTube, Instagram, TikTok, Facebook or Snapchat video.</p>
+        </div>
+        <div class="step">
+          <i class="fas fa-paste"></i>
+          <p>Paste the link in the input box above.</p>
+        </div>
+        <div class="step">
+          <i class="fas fa-eye"></i>
+          <p>Preview loads automatically with thumbnail & title.</p>
+        </div>
+        <div class="step">
+          <i class="fas fa-download"></i>
+          <p>Click "Download Video" to save it to your device.</p>
+        </div>
+      </div>
     </div>
 
     <footer id="contact">
-      Made with ❤️ by <b>StreamSnatcher</b> | All Rights Reserved © 2025
+      <p>
+        Made by 
+        <a href="https://goatnova.online" target="_blank"><b>GoatNova</b></a> | 
+        All Rights Reserved © 2025
+      </p>
+    
+      <div class="social-links">
+        <a href="https://facebook.com/yourpage" target="_blank" class="facebook">
+          <i class="fab fa-facebook-f"></i> Facebook
+        </a>
+        <a href="https://twitter.com/yourhandle" target="_blank" class="twitter">
+          <i class="fab fa-twitter"></i> Twitter
+        </a>
+        <a href="https://instagram.com/yourhandle" target="_blank" class="instagram">
+          <i class="fab fa-instagram"></i> Instagram
+        </a>
+        <a href="https://linkedin.com/company/yourcompany" target="_blank" class="linkedin">
+          <i class="fab fa-linkedin-in"></i> LinkedIn
+        </a>
+      </div>
     </footer>
+    
 
     <script>
       let currentUrl = "";
@@ -411,7 +509,6 @@
       const downloadBtn = document.getElementById("download-btn");
       let timeout = null;
 
-      // Auto preview on input/paste
       function schedulePreview() {
         clearTimeout(timeout);
         timeout = setTimeout(getPreview, 600);
@@ -504,11 +601,14 @@
           alert("❌ Failed to fetch download link.");
         } finally {
           spinner.style.display = "none";
-
           currentUrl = "";
           currentTitle = "";
           urlInput.value = "";
         }
+      });
+
+      document.querySelector(".menu-toggle").addEventListener("click", () => {
+        document.querySelector(".nav-links").classList.toggle("show");
       });
     </script>
   </body>
