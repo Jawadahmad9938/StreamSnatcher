@@ -26,6 +26,14 @@ def get_ffmpeg_path():
 def home():
     return render_template("index.html")
 
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
+
+
+@app.route("/disclaimer")
+def disclaimer():
+    return render_template("disclaimer.html")
 
 @app.route("/preview", methods=["POST"])
 def preview():
