@@ -135,7 +135,7 @@
       .platforms {
         display: flex;
         justify-content: center;
-        gap: 18px; /* thoda kam gap */
+        gap: 12px;
         margin-bottom: 20px;
         flex-wrap: wrap;
       }
@@ -147,33 +147,32 @@
         gap: 5px;
         padding: 8px;
         border-radius: 8px;
-        color: inherit; /* default text/icon color */
-        background: none; /* background hata diya */
+        color: inherit; 
+        background: none;
         cursor: pointer;
         transition: transform 0.25s ease;
       }
       
       .platform i {
-        font-size: 1.6rem; /* icons chhote */
+        font-size: 1.6rem; 
         transition: transform 0.3s ease, color 0.3s ease;
       }
       
       .platform span {
-        font-size: 0.75rem; /* text bhi chhota */
+        font-size: 0.75rem; 
         font-weight: 500;
-        color: #444; /* halka sa text color */
+        color: #444; 
       }
       
       .platform:hover i {
         transform: scale(1.2);
-        color: #ff2c55; /* hover pe attractive effect */
+        color: #ff2c55;
       }
       
       .platform:hover span {
         color: #000;
       }
-      
-      /* backgrounds remove, sirf icons ke liye colors */
+
       .platform.youtube i {
         color: #ff0000;
       }
