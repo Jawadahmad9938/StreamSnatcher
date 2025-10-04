@@ -1,3 +1,5 @@
+from dotenv import load_dotenv
+load_dotenv() 
 from waitress import serve
 from main import app
 import logging
