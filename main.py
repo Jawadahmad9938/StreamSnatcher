@@ -13,6 +13,7 @@ from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
 import tldextract
 
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -59,6 +60,7 @@ def is_private_ip(url: str) -> bool:
     except Exception:
         return True
 
+
 def is_blocked_domain(url: str) -> bool:
     url = url.lower()
     for dom in BLOCKED_DOMAINS:
@@ -66,28 +68,39 @@ def is_blocked_domain(url: str) -> bool:
             return True
     return False
 
+
 def is_allowed_domain(url: str) -> bool:
-    """Check against ALLOWED_DOMAINS from .env"""
+    """Check if domain is in ALLOWED_DOMAINS (supports subdomains + short domains)"""
     try:
         if not url.startswith(("http://", "https://")):
             url = "https://" + url
         ext = tldextract.extract(url)
+
         registered = ".".join([ext.domain, ext.suffix]) if ext.suffix else ext.domain
-        return registered.lower() in ALLOWED_DOMAINS
+        full_domain = ".".join(part for part in [ext.subdomain, ext.domain, ext.suffix] if part)
+
+        return (
+            registered.lower() in ALLOWED_DOMAINS
+            or full_domain.lower() in ALLOWED_DOMAINS
+        )
     except Exception:
         return False
+
 
 @app.route("/")
 def home():
     return render_template("index.html")
 
+
 @app.route("/privacy")
 def privacy():
     return render_template("privacy.html")
 
+
 @app.route("/disclaimer")
 def disclaimer():
     return render_template("disclaimer.html")
+
 
 @app.route("/preview", methods=["POST"])
 @limiter.limit("50 per minute")
@@ -112,6 +125,7 @@ def preview():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @app.route("/download", methods=["GET"])
 @limiter.limit("50 per minute")
@@ -146,6 +160,7 @@ def download():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
     app.run(debug=False, host="0.0.0.0", port=5000)
