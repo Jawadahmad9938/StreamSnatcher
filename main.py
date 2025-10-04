@@ -13,17 +13,11 @@ from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
 import tldextract
 
-# --------------------------
-# Load .env config
-# --------------------------
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "changeme")
 
-# --------------------------
-# Rate Limiting
-# --------------------------
 default_rate = os.getenv("RATELIMIT_DEFAULT", "50 per minute")
 limiter = Limiter(
     key_func=get_remote_address,
@@ -31,9 +25,6 @@ limiter = Limiter(
     default_limits=[default_rate, "1000 per day"]
 )
 
-# --------------------------
-# Allowed + Blocked Domains
-# --------------------------
 ALLOWED_DOMAINS = [d.strip().lower() for d in os.getenv("ALLOWED_DOMAINS", "").split(",") if d.strip()]
 BLOCKED_DOMAINS = [
     "netflix.com", "hulu.com", "disneyplus.com", "primevideo.com",
@@ -42,9 +33,6 @@ BLOCKED_DOMAINS = [
     "redtube.com", "youjizz.com", "brazzers.com"
 ]
 
-# --------------------------
-# FFmpeg Path
-# --------------------------
 SYSTEM_FFMPEG_PATH = "/usr/bin/ffmpeg"
 USE_IMAGEIO_FFMPEG = True
 
@@ -58,9 +46,6 @@ def get_ffmpeg_path():
             ffmpeg_location = iio_ffmpeg.get_ffmpeg_exe()
     return ffmpeg_location
 
-# --------------------------
-# Helpers
-# --------------------------
 def is_private_ip(url: str) -> bool:
     """Check if URL resolves to private/reserved IP"""
     try:
@@ -92,9 +77,6 @@ def is_allowed_domain(url: str) -> bool:
     except Exception:
         return False
 
-# --------------------------
-# Routes
-# --------------------------
 @app.route("/")
 def home():
     return render_template("index.html")
@@ -114,7 +96,6 @@ def preview():
     if not video_url:
         return jsonify({"error": "No URL provided"}), 400
 
-    # Security filters
     if is_private_ip(video_url) or is_blocked_domain(video_url) or not is_allowed_domain(video_url):
         return jsonify({"error": "❌ This source is not allowed due to policy."}), 403
 
@@ -139,7 +120,6 @@ def download():
     if not video_url:
         return jsonify({"error": "No URL provided"}), 400
 
-    # Security filters
     if is_private_ip(video_url) or is_blocked_domain(video_url) or not is_allowed_domain(video_url):
         return jsonify({"error": "❌ This source is not allowed due to policy."}), 403
 
@@ -167,8 +147,5 @@ def download():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# --------------------------
-# Main
-# --------------------------
 if __name__ == "__main__":
     app.run(debug=False, host="0.0.0.0", port=5000)
