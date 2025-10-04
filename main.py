@@ -210,17 +210,14 @@ def preview():
     if not video_url:
         return jsonify({"error": "No URL provided"}), 400
 
-    # 1) allowed-domain check
     if not is_allowed_domain(video_url):
-        return jsonify({"error": "Domain not allowed"}, 403)
+        return jsonify({"error": "Domain not allowed"}), 403
 
-    # 2) explicit blocked domains
     if is_blocked_domain(video_url):
         return jsonify({"error": "Blocked source (paywalled/adult)"}, 403)
 
-    # 3) private-ip check (DNS-fail for allowed domains is allowed)
     if is_private_ip(video_url):
-        return jsonify({"error": "URL resolves to private or reserved IP (blocked)"}, 403)
+        return jsonify({"error": "URL resolves to private or reserved IP (blocked)"}), 403
 
     try:
         ydl_opts = {"quiet": True, "skip_download": True, "no_warnings": True}
@@ -228,16 +225,13 @@ def preview():
             info = ydl.extract_info(video_url, download=False)
 
         return jsonify({
-            "title": info.get("title"),
-            "thumbnail": info.get("thumbnail"),
-            "source": info.get("extractor")
+            "title": info.get("title") or "Untitled",
+            "thumbnail": info.get("thumbnail") or "",
+            "source": info.get("extractor") or "unknown"
         })
-    except yt_dlp.utils.DownloadError as de:
-        logger.warning("yt-dlp download error for %s: %s", video_url, de)
-        return jsonify({"error": "Failed to retrieve metadata from source"}), 500
     except Exception as e:
-        logger.exception("Unexpected preview error for %s: %s", video_url, e)
-        return jsonify({"error": str(e)}), 500
+        logger.exception("Preview error: %s", e)
+        return jsonify({"error": "Failed to fetch preview"}), 500
 
 @app.route("/download", methods=["GET"])
 @limiter.limit("50 per minute")

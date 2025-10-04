@@ -139,7 +139,7 @@
         margin-bottom: 20px;
         flex-wrap: wrap;
       }
-      
+
       .platform {
         display: flex;
         flex-direction: column;
@@ -147,28 +147,28 @@
         gap: 5px;
         padding: 8px;
         border-radius: 8px;
-        color: inherit; 
+        color: inherit;
         background: none;
         cursor: pointer;
         transition: transform 0.25s ease;
       }
-      
+
       .platform i {
-        font-size: 1.6rem; 
+        font-size: 1.6rem;
         transition: transform 0.3s ease, color 0.3s ease;
       }
-      
+
       .platform span {
-        font-size: 0.75rem; 
+        font-size: 0.75rem;
         font-weight: 500;
-        color: #444; 
+        color: #444;
       }
-      
+
       .platform:hover i {
         transform: scale(1.2);
         color: #ff2c55;
       }
-      
+
       .platform:hover span {
         color: #000;
       }
@@ -176,23 +176,22 @@
       .platform.youtube i {
         color: #ff0000;
       }
-      
+
       .platform.instagram i {
         color: #e1306c;
       }
-      
+
       .platform.tiktok i {
         color: #010101;
       }
-      
+
       .platform.facebook i {
         color: #1877f2;
       }
-      
+
       .platform.snapchat i {
         color: #fffc00;
       }
-      
 
       .container {
         max-width: 600px;
@@ -516,16 +515,22 @@
         <a href="{{ url_for('disclaimer') }}">Disclaimer</a>
       </p>
     </footer>
-    <script type='text/javascript' src='//pl27759461.revenuecpmgate.com/ab/dc/15/abdc157fd984a178d3e56eab50d9bdbc.js'></script>
+    <script
+      type="text/javascript"
+      src="//pl27759461.revenuecpmgate.com/ab/dc/15/abdc157fd984a178d3e56eab50d9bdbc.js"
+    ></script>
     <script>
       let currentUrl = "";
       let currentTitle = "";
+
       const urlInput = document.getElementById("video-url");
       const spinner = document.getElementById("spinner");
       const previewDiv = document.getElementById("preview");
       const downloadBtn = document.getElementById("download-btn");
+
       let timeout = null;
-    
+
+      // Debounce preview request
       function schedulePreview() {
         clearTimeout(timeout);
         timeout = setTimeout(getPreview, 600);
@@ -534,37 +539,40 @@
       urlInput.addEventListener("paste", () =>
         setTimeout(schedulePreview, 100)
       );
-    
+
       async function getPreview() {
         const url = urlInput.value.trim();
         if (!url) {
           previewDiv.style.display = "none";
           return;
         }
-    
+
         currentUrl = url;
         spinner.style.display = "block";
         previewDiv.style.display = "none";
-    
+
         try {
           const res = await fetch("/preview", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ url }),
           });
+
           const data = await res.json();
           spinner.style.display = "none";
-    
+
           if (data.error) {
             previewDiv.style.display = "none";
             alert("❌ " + data.error);
             return;
           }
-    
-          document.getElementById("thumbnail").src = data.thumbnail;
-          document.getElementById("title").innerText = data.title;
+
+          // Update DOM with preview info
+          document.getElementById("thumbnail").src = data.thumbnail || "";
+          document.getElementById("title").innerText = data.title || "Untitled";
           document.getElementById("source").innerText =
             "Source: " + (data.source || "Unknown");
+
           previewDiv.style.display = "block";
           currentTitle = data.title;
         } catch (err) {
@@ -572,47 +580,35 @@
           alert("❌ Error fetching preview.");
         }
       }
-    
+
       downloadBtn.addEventListener("click", async () => {
         if (!currentUrl) return alert("No video URL");
-    
+
         spinner.style.display = "block";
-    
+
         try {
           const res = await fetch(
             "/download?url=" + encodeURIComponent(currentUrl)
           );
-    
-          const contentType = res.headers.get("content-type") || "";
-          if (contentType.includes("application/json")) {
-            const data = await res.json();
+
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
             spinner.style.display = "none";
-    
-            if (data.error) {
-              alert("❌ " + data.error);
-              return;
-            }
-    
-            const a = document.createElement("a");
-            a.href = data.direct_url;
-            a.download = (data.title || "video") + ".mp4";
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-          } else {
-            const blob = await res.blob();
-            spinner.style.display = "none";
-    
-            const downloadUrl = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = downloadUrl;
-            a.download = (currentTitle || "video") + ".mp4";
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-    
-            window.URL.revokeObjectURL(downloadUrl);
+            return alert("❌ " + (errData.error || "Download failed"));
           }
+
+          // Backend sends actual file
+          const blob = await res.blob();
+          spinner.style.display = "none";
+
+          const downloadUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = downloadUrl;
+          a.download = (currentTitle || "video") + ".mp4";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(downloadUrl);
         } catch (err) {
           console.error("❌ Download error:", err);
           alert("❌ Failed to fetch download link.");
@@ -623,7 +619,7 @@
           urlInput.value = "";
         }
       });
-    
+
       document.querySelector(".menu-toggle").addEventListener("click", () => {
         document.querySelector(".nav-links").classList.toggle("show");
       });
