@@ -14,18 +14,12 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import tldextract
 
-# --------------------------
-# App & Logging
-# --------------------------
 app = Flask(__name__)
 app.secret_key = "76ade72154f0b0f1417b815bfdd984b14db82aaa568c74ac1708bce43c43d2a6"
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("downloader")
 
-# --------------------------
-# Rate limiting
-# --------------------------
 default_rate = "10 per minute"
 limiter = Limiter(
     key_func=get_remote_address,
@@ -33,9 +27,6 @@ limiter = Limiter(
     default_limits=[default_rate, "1000 per day"]
 )
 
-# --------------------------
-# Domains configuration
-# --------------------------
 ALLOWED_DOMAINS = [
     "youtube.com", "youtu.be", "tiktok.com", "vm.tiktok.com",
     "instagram.com", "facebook.com", "fb.watch", "pinterest.com",
@@ -54,9 +45,6 @@ BLOCKED_DOMAINS = [
     "redtube.com", "youjizz.com", "brazzers.com"
 ]
 
-# --------------------------
-# FFmpeg path helper
-# --------------------------
 SYSTEM_FFMPEG_PATH = "/usr/bin/ffmpeg"
 USE_IMAGEIO_FFMPEG = True
 
@@ -70,9 +58,6 @@ def get_ffmpeg_path():
             ffmpeg_location = iio_ffmpeg.get_ffmpeg_exe()
     return ffmpeg_location
 
-# --------------------------
-# Helper functions
-# --------------------------
 def extract_hostname(url: str) -> str | None:
     try:
         if not url.startswith(("http://", "https://")):
@@ -157,9 +142,6 @@ def is_private_ip(url: str) -> bool:
     except Exception:
         return True
 
-# --------------------------
-# Routes
-# --------------------------
 @app.route("/")
 def home():
     return render_template("index.html")
@@ -233,8 +215,5 @@ def download():
         logger.exception("Download error: %s", e)
         return jsonify({"error": "Download failed"}), 500
 
-# --------------------------
-# Run
-# --------------------------
 if __name__ == "__main__":
     app.run(debug=False, host="0.0.0.0", port=5000)
