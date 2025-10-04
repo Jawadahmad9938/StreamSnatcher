@@ -202,6 +202,7 @@ def privacy():
 def disclaimer():
     return render_template("disclaimer.html")
 
+# ---- preview ----
 @app.route("/preview", methods=["POST"])
 @limiter.limit("50 per minute")
 def preview():
@@ -214,7 +215,7 @@ def preview():
         return jsonify({"error": "Domain not allowed"}), 403
 
     if is_blocked_domain(video_url):
-        return jsonify({"error": "Blocked source (paywalled/adult)"}, 403)
+        return jsonify({"error": "Blocked source (paywalled/adult)"}), 403
 
     if is_private_ip(video_url):
         return jsonify({"error": "URL resolves to private or reserved IP (blocked)"}), 403
@@ -233,6 +234,7 @@ def preview():
         logger.exception("Preview error: %s", e)
         return jsonify({"error": "Failed to fetch preview"}), 500
 
+# ---- download ----
 @app.route("/download", methods=["GET"])
 @limiter.limit("50 per minute")
 def download():
@@ -240,17 +242,14 @@ def download():
     if not video_url:
         return jsonify({"error": "No URL provided"}), 400
 
-    # 1) allowed domain
     if not is_allowed_domain(video_url):
-        return jsonify({"error": "Domain not allowed"}, 403)
+        return jsonify({"error": "Domain not allowed"}), 403
 
-    # 2) blocked domains
     if is_blocked_domain(video_url):
-        return jsonify({"error": "Blocked source (paywalled/adult)"}, 403)
+        return jsonify({"error": "Blocked source (paywalled/adult)"}), 403
 
-    # 3) private IP check
     if is_private_ip(video_url):
-        return jsonify({"error": "URL resolves to private or reserved IP (blocked)"}, 403)
+        return jsonify({"error": "URL resolves to private or reserved IP (blocked)"}), 403
 
     try:
         temp_dir = tempfile.mkdtemp()
@@ -269,7 +268,6 @@ def download():
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=True)
 
-        filename = os.path.basename(output_path)
         return send_file(
             output_path,
             as_attachment=True,
