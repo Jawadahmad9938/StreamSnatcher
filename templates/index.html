@@ -525,7 +525,7 @@
       const previewDiv = document.getElementById("preview");
       const downloadBtn = document.getElementById("download-btn");
       let timeout = null;
-
+    
       function schedulePreview() {
         clearTimeout(timeout);
         timeout = setTimeout(getPreview, 600);
@@ -534,18 +534,18 @@
       urlInput.addEventListener("paste", () =>
         setTimeout(schedulePreview, 100)
       );
-
+    
       async function getPreview() {
         const url = urlInput.value.trim();
         if (!url) {
           previewDiv.style.display = "none";
           return;
         }
-
+    
         currentUrl = url;
         spinner.style.display = "block";
         previewDiv.style.display = "none";
-
+    
         try {
           const res = await fetch("/preview", {
             method: "POST",
@@ -554,13 +554,13 @@
           });
           const data = await res.json();
           spinner.style.display = "none";
-
+    
           if (data.error) {
             previewDiv.style.display = "none";
-            alert("❌ Preview failed: " + data.error);
+            alert("❌ " + data.error);
             return;
           }
-
+    
           document.getElementById("thumbnail").src = data.thumbnail;
           document.getElementById("title").innerText = data.title;
           document.getElementById("source").innerText =
@@ -572,27 +572,27 @@
           alert("❌ Error fetching preview.");
         }
       }
-
+    
       downloadBtn.addEventListener("click", async () => {
         if (!currentUrl) return alert("No video URL");
-
+    
         spinner.style.display = "block";
-
+    
         try {
           const res = await fetch(
             "/download?url=" + encodeURIComponent(currentUrl)
           );
-
+    
           const contentType = res.headers.get("content-type") || "";
           if (contentType.includes("application/json")) {
             const data = await res.json();
             spinner.style.display = "none";
-
+    
             if (data.error) {
-              alert("❌ Download error: " + data.error);
+              alert("❌ " + data.error);
               return;
             }
-
+    
             const a = document.createElement("a");
             a.href = data.direct_url;
             a.download = (data.title || "video") + ".mp4";
@@ -602,7 +602,7 @@
           } else {
             const blob = await res.blob();
             spinner.style.display = "none";
-
+    
             const downloadUrl = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = downloadUrl;
@@ -610,7 +610,7 @@
             document.body.appendChild(a);
             a.click();
             a.remove();
-
+    
             window.URL.revokeObjectURL(downloadUrl);
           }
         } catch (err) {
@@ -623,7 +623,7 @@
           urlInput.value = "";
         }
       });
-
+    
       document.querySelector(".menu-toggle").addEventListener("click", () => {
         document.querySelector(".nav-links").classList.toggle("show");
       });
