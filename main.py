@@ -28,15 +28,103 @@ limiter = Limiter(
 )
 
 ALLOWED_DOMAINS = [
-    "youtube.com", "youtu.be", "tiktok.com", "vm.tiktok.com",
-    "instagram.com", "facebook.com", "fb.watch", "pinterest.com",
-    "dailymotion.com", "vimeo.com", "twitter.com", "x.com",
-    "reddit.com", "linkedin.com", "twitch.tv", "snapchat.com",
-    "bilibili.com", "vk.com", "soundcloud.com", "vevo.com",
-    "rumble.com", "metacafe.com", "odnoklassniki.ru", "threads.net",
-    "likee.com", "triller.co", "byte.co", "clapperapp.com",
-    "trell.co", "9gag.com"
+
+    # ==== YouTube ====
+    "youtube.com", "www.youtube.com", "m.youtube.com",
+    "music.youtube.com", "studio.youtube.com", "gaming.youtube.com",
+    "kids.youtube.com", "tv.youtube.com", "news.youtube.com",
+    "youtu.be", "yt.be", "ytimg.com", "youtube-nocookie.com",
+
+    # ==== TikTok ====
+    "tiktok.com", "www.tiktok.com", "m.tiktok.com", "api.tiktok.com",
+    "live.tiktok.com", "music.tiktok.com", "shop.tiktok.com",
+    "account.tiktok.com", "ads.tiktok.com", "support.tiktok.com",
+    "library.tiktok.com", "service.tiktok.com", "tv.tiktok.com",
+    "pro.tiktok.com", "developer.tiktok.com", "developers.tiktok.com",
+    "tiktokcdn.com", "tiktokv.com", "vt.tiktok.com", "vm.tiktok.com",
+    "v.tiktok.com", "ib.tiktokv.com", "api-h2.tiktokv.com",
+    "p16-tiktokcdn-com.akamaized.net", "muscdn.com", "musical.ly",
+    "musemuse.cn", "v16a.tiktokcdn.com", "v16m.tiktokcdn.com", "v19.tiktokcdn.com",
+    "*.tiktok.com",
+
+    # ==== Instagram ====
+    "instagram.com", "www.instagram.com", "m.instagram.com",
+    "graph.instagram.com", "api.instagram.com", "business.instagram.com",
+    "ig.me", "cdninstagram.com", "instagr.am",
+
+    # ==== Facebook ====
+    "facebook.com", "www.facebook.com", "m.facebook.com",
+    "fb.com", "fb.watch", "fb.gg", "fb.me", "business.facebook.com",
+    "developers.facebook.com", "l.facebook.com", "apps.facebook.com",
+    "touch.facebook.com", "upload.facebook.com", "messenger.com",
+    "m.me", "meta.com", "static.xx.fbcdn.net", "video.xx.fbcdn.net",
+    "connect.facebook.net",
+
+    # ==== Twitter / X ====
+    "twitter.com", "www.twitter.com", "mobile.twitter.com",
+    "x.com", "t.co", "api.twitter.com", "publish.twitter.com",
+    "video.twimg.com", "pbs.twimg.com",
+
+    # ==== Pinterest ====
+    "pinterest.com", "www.pinterest.com", "pin.it",
+    "in.pinterest.com", "id.pinterest.com", "br.pinterest.com",
+    "es.pinterest.com", "api.pinterest.com", "pinterest.co.uk",
+
+    # ==== Snapchat ====
+    "snapchat.com", "www.snapchat.com", "story.snapchat.com",
+    "lens.snapchat.com", "ads.snapchat.com", "accounts.snapchat.com",
+    "support.snapchat.com", "map.snapchat.com", "scan.snapchat.com",
+    "bitmoji.com", "snapcamera.snapchat.com", "snapkit.com",
+    "app.snapchat.com", "snappublisher.snapchat.com",
+
+    # ==== Reddit ====
+    "reddit.com", "www.reddit.com", "old.reddit.com", "new.reddit.com",
+    "np.reddit.com", "amp.reddit.com", "i.redd.it", "v.redd.it",
+    "preview.redd.it", "oauth.reddit.com", "gateway.reddit.com",
+
+    # ==== Vimeo ====
+    "vimeo.com", "www.vimeo.com", "player.vimeo.com",
+    "api.vimeo.com", "vod-progressive.akamaized.net",
+
+    # ==== Dailymotion ====
+    "dailymotion.com", "www.dailymotion.com", "m.dailymotion.com",
+    "api.dailymotion.com", "dai.ly", "upload.dailymotion.com",
+
+    # ==== LinkedIn ====
+    "linkedin.com", "www.linkedin.com", "m.linkedin.com",
+    "api.linkedin.com", "learning.linkedin.com", "business.linkedin.com",
+    "slide.linkedin.com", "snap.licdn.com", "media.licdn.com",
+
+    # ==== Twitch ====
+    "twitch.tv", "www.twitch.tv", "m.twitch.tv", "clips.twitch.tv",
+    "api.twitch.tv", "player.twitch.tv", "dashboard.twitch.tv",
+    "vod-secure.twitch.tv", "assets.twitch.tv",
+
+    # ==== SoundCloud ====
+    "soundcloud.com", "www.soundcloud.com", "m.soundcloud.com",
+    "api.soundcloud.com", "a-v2.sndcdn.com", "sndcdn.com",
+
+    # ==== Threads ====
+    "threads.net", "www.threads.net",
+
+    # ==== VK ====
+    "vk.com", "www.vk.com", "m.vk.com", "api.vk.com",
+    "login.vk.com", "oauth.vk.com", "vkuseraudio.net",
+
+    # ==== Others ====
+    "likee.com", "www.likee.com", "triller.co", "www.triller.co",
+    "byte.co", "www.byte.co", "clapperapp.com", "www.clapperapp.com",
+    "trell.co", "www.trell.co", "9gag.com", "www.9gag.com",
+    "bilibili.com", "www.bilibili.com", "m.bilibili.com",
+    "rumble.com", "www.rumble.com", "metacafe.com", "www.metacafe.com",
+    "odnoklassniki.ru", "ok.ru", "m.ok.ru", "video.ok.ru",
+
+    # ==== URL Shorteners ====
+    "bit.ly", "tinyurl.com", "t.ly", "rebrand.ly", "rb.gy",
+    "cutt.ly", "ow.ly", "snip.ly", "bl.ink", "short.io",
+    "short.cm", "t2m.io", "is.gd", "1drv.ms", "goo.gl"
 ]
+
 
 BLOCKED_DOMAINS = [
     "netflix.com", "hulu.com", "disneyplus.com", "primevideo.com",
