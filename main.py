@@ -171,23 +171,31 @@ def get_registered_domain(url: str) -> str:
 
 def is_allowed_domain(url: str) -> bool:
     try:
-        hostname = extract_hostname(url)
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+
+        parsed = urlparse(url)
+        hostname = parsed.hostname.lower() if parsed.hostname else ""
         if not hostname:
             return False
-        hostname = hostname.lower()
-        registered = get_registered_domain(url)
 
-        if registered and registered in ALLOWED_DOMAINS:
-            return True
-        if hostname in ALLOWED_DOMAINS:
-            return True
+        # Normalize hostname (remove www.)
+        if hostname.startswith("www."):
+            hostname = hostname[4:]
+
+        # Extract registered domain safely
+        ext = tldextract.extract(url)
+        registered = ext.registered_domain or hostname
+
+        # Check direct match or subdomain
         for allowed in ALLOWED_DOMAINS:
-            if hostname == allowed or hostname.endswith("." + allowed):
+            if hostname == allowed or hostname.endswith("." + allowed) or allowed in hostname or registered.endswith(allowed):
                 return True
         return False
     except Exception as e:
         logger.exception("is_allowed_domain error: %s", e)
         return False
+
 
 def is_blocked_domain(url: str) -> bool:
     try:
