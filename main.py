@@ -5,6 +5,9 @@ import tempfile
 import socket
 import ipaddress
 import logging
+import ssl
+import certifi
+ssl._create_default_https_context = lambda: ssl.create_default_context(cafile=certifi.where())
 import yt_dlp
 import imageio_ffmpeg as iio_ffmpeg
 
@@ -28,7 +31,6 @@ limiter = Limiter(
 )
 
 ALLOWED_DOMAINS = [
-
     # ==== YouTube ====
     "youtube.com", "www.youtube.com", "m.youtube.com",
     "music.youtube.com", "studio.youtube.com", "gaming.youtube.com",
@@ -125,7 +127,6 @@ ALLOWED_DOMAINS = [
     "short.cm", "t2m.io", "is.gd", "1drv.ms", "goo.gl"
 ]
 
-
 BLOCKED_DOMAINS = [
     "netflix.com", "hulu.com", "disneyplus.com", "primevideo.com",
     "hotstar.com", "hbomax.com", "paramountplus.com", "peacocktv.com",
@@ -179,15 +180,12 @@ def is_allowed_domain(url: str) -> bool:
         if not hostname:
             return False
 
-        # Normalize hostname (remove www.)
         if hostname.startswith("www."):
             hostname = hostname[4:]
 
-        # Extract registered domain safely
         ext = tldextract.extract(url)
         registered = ext.registered_domain or hostname
 
-        # Check direct match or subdomain
         for allowed in ALLOWED_DOMAINS:
             if hostname == allowed or hostname.endswith("." + allowed) or allowed in hostname or registered.endswith(allowed):
                 return True
@@ -195,7 +193,6 @@ def is_allowed_domain(url: str) -> bool:
     except Exception as e:
         logger.exception("is_allowed_domain error: %s", e)
         return False
-
 
 def is_blocked_domain(url: str) -> bool:
     try:
@@ -276,10 +273,16 @@ def preview():
         logger.exception("Preview error: %s", e)
         return jsonify({"error": "Failed to fetch preview"}), 500
 
+# =====================
+# DOWNLOAD WITH PROGRESS
+# =====================
+progress_data = {}
+
 @app.route("/download", methods=["GET"])
 @limiter.limit("50 per minute")
 def download():
     video_url = request.args.get("url")
+    download_id = request.args.get("id") or str(uuid.uuid4())
     if not video_url:
         return jsonify({"error": "No URL provided"}), 400
     if not is_allowed_domain(video_url):
@@ -288,9 +291,21 @@ def download():
         return jsonify({"error": "Blocked source"}), 403
     if is_private_ip(video_url):
         return jsonify({"error": "Private/Reserved IP blocked"}), 403
+
+    progress_data[download_id] = {"percent": "0%", "title": "Starting..."}
+
     try:
         temp_dir = tempfile.mkdtemp()
         output_path = os.path.join(temp_dir, f"{uuid.uuid4()}.mp4")
+
+        def progress_hook(d):
+            if d.get("status") == "downloading":
+                percent = d.get("_percent_str", "0%").strip()
+                progress_data[download_id]["percent"] = percent
+            elif d.get("status") == "finished":
+                progress_data[download_id]["percent"] = "100%"
+                progress_data[download_id]["title"] = "Processing..."
+
         ydl_opts = {
             "quiet": True,
             "no_warnings": True,
@@ -299,9 +314,17 @@ def download():
             "ffmpeg_location": get_ffmpeg_path(),
             "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]",
             "noplaylist": True,
+            "cookiefile": None,
+            "http_headers": {"User-Agent": "Mozilla/5.0"},
+            "progress_hooks": [progress_hook],
         }
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=True)
+
+        progress_data[download_id]["percent"] = "100%"
+        progress_data[download_id]["title"] = info.get("title", "video")
+
         return send_file(
             output_path,
             as_attachment=True,
@@ -310,6 +333,13 @@ def download():
     except Exception as e:
         logger.exception("Download error: %s", e)
         return jsonify({"error": "Download failed"}), 500
+
+@app.route("/progress/<download_id>")
+def progress(download_id):
+    data = progress_data.get(download_id)
+    if not data:
+        return jsonify({"percent": "0%", "title": "Waiting..."}), 200
+    return jsonify(data)
 
 if __name__ == "__main__":
     app.run(debug=False, host="0.0.0.0", port=5000)

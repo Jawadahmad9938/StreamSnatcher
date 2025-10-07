@@ -522,57 +522,54 @@
     <script>
       let currentUrl = "";
       let currentTitle = "";
-
+      
       const urlInput = document.getElementById("video-url");
       const spinner = document.getElementById("spinner");
       const previewDiv = document.getElementById("preview");
       const downloadBtn = document.getElementById("download-btn");
 
+      
       let timeout = null;
-
-      // Debounce preview request
+      
       function schedulePreview() {
         clearTimeout(timeout);
         timeout = setTimeout(getPreview, 600);
       }
       urlInput.addEventListener("input", schedulePreview);
-      urlInput.addEventListener("paste", () =>
-        setTimeout(schedulePreview, 100)
-      );
-
+      urlInput.addEventListener("paste", () => setTimeout(schedulePreview, 100));
+      
       async function getPreview() {
         const url = urlInput.value.trim();
         if (!url) {
           previewDiv.style.display = "none";
           return;
         }
-
+        document.getElementById("progress-box")?.remove();
         currentUrl = url;
         spinner.style.display = "block";
         previewDiv.style.display = "none";
-
+      
         try {
           const res = await fetch("/preview", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ url }),
           });
-
+      
           const data = await res.json();
           spinner.style.display = "none";
-
+      
           if (data.error) {
             previewDiv.style.display = "none";
             alert("❌ " + data.error);
             return;
           }
-
-          // Update DOM with preview info
+      
           document.getElementById("thumbnail").src = data.thumbnail || "";
           document.getElementById("title").innerText = data.title || "Untitled";
           document.getElementById("source").innerText =
             "Source: " + (data.source || "Unknown");
-
+      
           previewDiv.style.display = "block";
           currentTitle = data.title;
         } catch (err) {
@@ -580,27 +577,42 @@
           alert("❌ Error fetching preview.");
         }
       }
-
+      
       downloadBtn.addEventListener("click", async () => {
         if (!currentUrl) return alert("No video URL");
-
+      
         spinner.style.display = "block";
-
+      
         try {
+          const progressId = crypto.randomUUID();
+          const progressBox = document.createElement("div");
+          progressBox.id = "progress-box";
+          progressBox.style.marginTop = "10px";
+          progressBox.innerHTML = `<p id="progress-text">⏳ Downloading... 0%</p>`;
+          previewDiv.appendChild(progressBox);
+      
+          const interval = setInterval(async () => {
+            const res = await fetch(`/progress/${progressId}`);
+            const data = await res.json();
+            document.getElementById("progress-text").innerText =
+              `⏳ ${data.title} — ${data.percent}`;
+            if (data.percent === "100%") clearInterval(interval);
+          }, 1000);
+      
           const res = await fetch(
-            "/download?url=" + encodeURIComponent(currentUrl)
+            `/download?url=${encodeURIComponent(currentUrl)}&id=${progressId}`
           );
-
+      
           if (!res.ok) {
             const errData = await res.json().catch(() => ({}));
             spinner.style.display = "none";
             return alert("❌ " + (errData.error || "Download failed"));
           }
-
-          // Backend sends actual file
+      
           const blob = await res.blob();
           spinner.style.display = "none";
-
+          clearInterval(interval);
+      
           const downloadUrl = window.URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = downloadUrl;
@@ -609,6 +621,7 @@
           a.click();
           a.remove();
           window.URL.revokeObjectURL(downloadUrl);
+          progressBox.innerHTML = `<p>✅ Download Complete!</p>`;
         } catch (err) {
           console.error("❌ Download error:", err);
           alert("❌ Failed to fetch download link.");
@@ -619,9 +632,9 @@
           urlInput.value = "";
         }
       });
-
+      
       document.querySelector(".menu-toggle").addEventListener("click", () => {
-        document.querySelector(".nav-links").classList.toggle("show");
+        document.querySelector(".nav-links").classList.toggle("active");
       });
     </script>
   </body>
